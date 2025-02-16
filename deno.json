@@ -1,6 +1,8 @@
 {
   "tasks": {
-    "dev": "deno run --watch --allow-read --allow-write main.ts",
+    "build:file-db": "deno compile --output=dist/file-db.exe --allow-read --allow-write src/main.ts",
+    "dev": "deno run --watch --allow-read --allow-write src/main.ts",
+    "file-db": "deno run --allow-read --allow-write --allow-run src/main.ts",
     "test": "deno test --watch --allow-read",
     "update-test-snapshots": "deno test --allow-read --allow-write -- --update"
   },
