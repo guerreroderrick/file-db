@@ -1,0 +1,5 @@
+export const snapshot = {};
+
+snapshot[`testGetFileHash_text 1`] = `"433c9675b19f84ce84f90fe7ac43187f334b72e10a5c2652571d6f1c7695bd15"`;
+
+snapshot[`testGetFileHash_binary 1`] = `"1112d35e0bae11d47e742bd7d6c60495c300b51dcf6a455ef446aa6718676c3d"`;
