@@ -1,41 +1,16 @@
 import { assert } from "@std/assert/assert";
-import { DB } from '../deps.ts'
 import { assertEquals } from "@std/assert/equals";
 import { getFileHash, getFileHashSync } from "./getFileHash.ts";
 import { DIGEST_ALGORITHM_NAMES } from "jsr:@std/crypto/crypto";
 import { getSizeDescription } from "./getSizeDescription.ts";
+import { performRegularCleanup, registerProcessCleanup } from "./registerProcessCleanup.ts";
 
 if (import.meta.main) {
-    const db = new DB('.file-db.sqlite')
-    db.execute(`
-        create table if not exists config (
-            key text primary key,
-            value text
-            )
-    `)
-
-    const cleanup = (normal?: boolean) => {
-        db.close()
-        if (!normal) {
-            console.warn('Abnormal exit.')
-            Deno.exit(1)
-        }
-    }
-    const handleSignal = (signal: Deno.Signal) =>
-        () => {
-            console.log(`Received signal: ${signal}`)
-            cleanup()
-        }
-
-    Deno.addSignalListener('SIGINT', handleSignal('SIGINT'))
-    Deno.addSignalListener('SIGBREAK', handleSignal('SIGBREAK'))
-    if (Deno.build.os !== 'windows') {
-        Deno.addSignalListener('SIGTERM', handleSignal('SIGTERM'))
-    }
+    registerProcessCleanup(() => {})
     try {
         await main(Deno.args)
     } finally {
-        cleanup(true)
+        performRegularCleanup()
     }
 }
 

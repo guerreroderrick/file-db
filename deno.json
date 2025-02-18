@@ -1,8 +1,8 @@
 {
   "tasks": {
     "dev": "deno run --watch --allow-read --allow-write src/testHashes.ts",
-    "file-db": "deno run --allow-read --allow-write --allow-run src/main.ts",
-    "testHashes": "deno run --allow-read src/testHashes.ts",
+    "file-db": "deno run --allow-read --allow-write --allow-run src/file-db.ts",
+    "testHashes": "deno run --allow-read --allow-run src/testHashes.ts",
     "test": "deno test --watch --allow-read",
     "update-test-snapshots": "deno test --allow-read --allow-write -- --update"
   },
