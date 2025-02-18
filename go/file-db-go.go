@@ -133,6 +133,8 @@ func listFiles(dir string) []string {
 			log.Panicln(err)
 		}
 		if !info.IsDir() {
+			_ = info.ModTime().Unix()
+			_ = info.Size()
 			files = append(files, path)
 		}
 		return nil
