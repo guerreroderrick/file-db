@@ -4,6 +4,7 @@ import { getFileHash, getFileHashSync } from "./getFileHash.ts";
 import { DIGEST_ALGORITHM_NAMES } from "jsr:@std/crypto/crypto";
 import { getSizeDescription } from "./getSizeDescription.ts";
 import { performRegularCleanup, registerProcessCleanup } from "./registerProcessCleanup.ts";
+import { listFiles, listFilesSync } from "./listFiles.ts";
 
 if (import.meta.main) {
     registerProcessCleanup(() => {})
@@ -42,10 +43,11 @@ async function main(args: string[]) {
     const fileList = listedFiles.map(([path]) => path)
 
     const syncFileList = listFilesSync(rootPath)
+    const syncFilePaths = syncFileList.map(([path]) => path)
     const listFilesSyncTime = Date.now()
     console.log(`List files sync time: ${listFilesSyncTime - listFilesAsyncTime}ms`)
 
-    assertEquals(fileList, syncFileList)
+    assertEquals(fileList, syncFilePaths)
 
     const goHashFiles: [hash: string, file: string][] = []
     if (includeExternalTest) {
@@ -77,24 +79,28 @@ async function main(args: string[]) {
     }
 
     if (includeExternalTest) {
-        const smallIterations = 100
-        const largeIterations = 30
+        const smallIterations = 50
+        const largeIterations = 20
 
         const sentinelLargest: [path: string, size: number] = ['<Invalid>', Infinity]
         const sentinelSmallest: [path: string, size: number] = ['<Invalid>', 0]
 
-        const smallestFile = listedFiles.reduce((smallest, [path, size]) => {
-            if (size > 0 && size < (smallest?.[1] ?? Infinity)) {
-                return [path, size]
-            }
-            return smallest
-        }, sentinelLargest)
-        const largestFile = listedFiles.reduce((largest, [path, size]) => {
-            if (size > (largest?.[1] ?? 0)) {
-                return [path, size]
-            }
-            return largest
-        }, sentinelSmallest)
+        const smallestFile = listedFiles
+            .map(([path, size]) => [path, size] as const)
+            .reduce((smallest, [path, size]) => {
+                if (size > 0 && size < (smallest?.[1] ?? Infinity)) {
+                    return [path, size]
+                }
+                return smallest
+            }, sentinelLargest)
+        const largestFile = listedFiles
+            .map(([path, size]) => [path, size] as const)
+            .reduce((largest, [path, size]) => {
+                if (size > (largest?.[1] ?? 0)) {
+                    return [path, size]
+                }
+                return largest
+            }, sentinelSmallest)
 
         const smallestHash = await getFileHash(smallestFile[0], 'SHA-256')
         const smallestSizeDesc = getSizeDescription(smallestFile[1])
@@ -108,77 +114,43 @@ async function main(args: string[]) {
             const hash = await externalHash([smallestFile[0]], true)
             assertEquals(hash[0][0], smallestHash)
         }
-        console.log(`Small file (${smallestSize}) external hash time stdin: ${Date.now() - startTime}ms`)
+        console.log(`Small file (${smallestSize})x${smallIterations} external hash time stdin: ${Date.now() - startTime}ms`)
 
         startTime = Date.now()
         for (let i = 0; i < smallIterations; i++) {
             const hash = await externalHash([smallestFile[0]], false)
             assertEquals(hash[0][0], smallestHash)
         }
-        console.log(`Small file (${smallestSize}) external hash time arg: ${Date.now() - startTime}ms`)
+        console.log(`Small file (${smallestSize})x${smallIterations} external hash time arg: ${Date.now() - startTime}ms`)
 
         startTime = Date.now()
         for (let i = 0; i < smallIterations; i++) {
             const hash = getFileHashSync(smallestFile[0], 'SHA-256')
             assertEquals(hash, smallestHash)
         }
-        console.log(`Small file (${smallestSize}) internal hash time: ${Date.now() - startTime}ms`)
+        console.log(`Small file (${smallestSize})x${smallIterations} internal hash time: ${Date.now() - startTime}ms`)
 
         startTime = Date.now()
         for (let i = 0; i < largeIterations; i++) {
             const hash = await externalHash([largestFile[0]], true)
             assertEquals(hash[0][0], largestHash)
         }
-        console.log(`Large file (${largestSize}) external hash time stdin: ${Date.now() - startTime}ms`)
+        console.log(`Large file (${largestSize})x${largeIterations} external hash time stdin: ${Date.now() - startTime}ms`)
 
         startTime = Date.now()
         for (let i = 0; i < largeIterations; i++) {
             const hash = await externalHash([largestFile[0]], false)
             assertEquals(hash[0][0], largestHash)
         }
-        console.log(`Large file (${largestSize}) external hash time arg: ${Date.now() - startTime}ms`)
+        console.log(`Large file (${largestSize})x${largeIterations} external hash time arg: ${Date.now() - startTime}ms`)
 
         startTime = Date.now()
         for (let i = 0; i < largeIterations; i++) {
             const hash = getFileHashSync(largestFile[0], 'SHA-256')
             assertEquals(hash, largestHash)
         }
-        console.log(`Large file (${largestSize}) internal hash time: ${Date.now() - startTime}ms`)
+        console.log(`Large file (${largestSize})x${largeIterations} internal hash time: ${Date.now() - startTime}ms`)
     }
-}
-
-async function listFiles(rootPath: string) {
-    const results: [path: string, size: number][] = []
-    const paths = [rootPath]
-    while (paths.length > 0) {
-        const path = paths.shift()!
-        const stat = await Deno.stat(path)
-        if (stat.isDirectory) {
-            for await (const entry of Deno.readDir(path)) {
-                paths.push(`${path}/${entry.name}`)
-            }
-        } else {
-            results.push([path, stat.size])
-        }
-    }
-    return results
-}
-
-function listFilesSync(rootPath: string) {
-    const results: string[] = []
-    const paths = [rootPath]
-    while (paths.length > 0) {
-        const path = paths.shift()!
-        const stat = Deno.statSync(path)
-        if (stat.isDirectory) {
-            for (const entry of Deno.readDirSync(path)) {
-                paths.push(`${path}/${entry.name}`)
-            }
-        } else {
-            results.push(path)
-        }
-    }
-    return results
 }
 
 async function externalHash(fileList: string[], forceStdin = false) {

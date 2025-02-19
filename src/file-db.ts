@@ -1,24 +1,27 @@
-import { DB } from "../deps.ts";
-import { performRegularCleanup, registerProcessCleanup } from "./registerProcessCleanup.ts";
+import { assert } from "@std/assert/assert";
+import { performRegularCleanup } from "./registerProcessCleanup.ts";
+import { listFilesSync } from "./listFiles.ts";
 
 if (import.meta.main) {
     await main(Deno.args)
 }
 
 async function main(args: string[]) {
-    const db = new DB('.file-db.sqlite')
-    db.execute(`
-        create table if not exists config (
-            key text primary key,
-            value text
-            )
-    `)
-    registerProcessCleanup(() => { db.close() })
-
     try {
-        console.log({ args })
-        await Promise.resolve()
+        await syncFileDb(args)
     } finally {
         performRegularCleanup()
     }
+}
+
+function syncFileDb(args: string[]) {
+    if (args.length !== 1) {
+        assert(false, `Usage: file-db <file-path>`)
+    }
+
+    const [filePath] = args
+
+    const files = listFilesSync(filePath)
+    const hostname = Deno.hostname()
+    console.log({ hostname, fileCount: files.length })
 }
