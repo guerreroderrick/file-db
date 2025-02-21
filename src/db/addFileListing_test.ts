@@ -55,39 +55,12 @@ select size, version, isArchived
     ])
 })
 
-Deno.test(function testGetFilesNeedingHash() {
-    initAndClearFileTable(testDb)
-
-    updateFileHash({
-        db: testDb,
-        hostname: 'test-hostname',
-        file: ["parent/test.txt", 123, 456],
-        hash: 'hash1',
-    })
-    addFileListing({
-        db: testDb,
-        hostname: 'test-hostname',
-        file: ["parent/test2.txt", 123, 456],
-    })
-    addFileListing({
-        db: testDb,
-        hostname: 'test-hostname2',
-        file: ["parent/test3.txt", 123, 456],
-    })
-
-    const filesNeedingHash = getFilesNeedingHash({
-        db: testDb,
-        hostname: 'test-hostname',
-    })
-    assertEquals(filesNeedingHash, [["parent/test2.txt", 123, 456]])
-})
-
-type addFileListingParams = {
+export type addFileListingParams = {
     db: DB
     hostname: string
     file: FileEntry
 }
-function addFileListing({
+export function addFileListing({
     db,
     hostname,
     file: [path, size, modifyTime],
@@ -220,11 +193,11 @@ insert into [files_Log] (hostname, path, version, size, modifyTime, hash)
 
 })}
 
-type GetFilesNeedingHashParams = {
+export type GetFilesNeedingHashParams = {
     db: DB
     hostname: string
 }
-function getFilesNeedingHash({
+export function getFilesNeedingHash({
     db,
     hostname,
 }: GetFilesNeedingHashParams) {
