@@ -1,8 +1,8 @@
-import { assert } from "@std/assert/assert";
-import { DB } from "../deps.ts";
-import { FileEntry } from "./listFiles.ts";
-import { assertEquals } from "@std/assert/equals";
-import { assertThrows } from "@std/assert/throws";
+import { assert } from '@std/assert/assert'
+import { DB } from '../../deps.ts'
+import { FileEntry } from './../listFiles.ts'
+import { assertEquals } from '@std/assert/equals'
+import { assertThrows } from '@std/assert/throws'
 
 const testDb = new DB((import.meta.dirname??'.') + '/../.test.sqlite3')
 
