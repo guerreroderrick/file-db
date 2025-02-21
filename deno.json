@@ -3,7 +3,7 @@
     "dev": "deno run --watch --allow-read --allow-write src/testHashes.ts",
     "file-db": "deno run --allow-read --allow-write --allow-run --allow-sys src/file-db.ts",
     "testHashes": "deno run --allow-read --allow-run src/testHashes.ts",
-    "test": "deno test --watch --allow-read",
+    "test": "deno test --watch --allow-read --allow-write",
     "update-test-snapshots": "deno test --allow-read --allow-write -- --update"
   },
   "imports": {
