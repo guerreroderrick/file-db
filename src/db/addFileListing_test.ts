@@ -128,19 +128,3 @@ function initAndClearFileTable(db: DB) {
     initTable_files_Log(db)
     db.execute(`delete from [files_Log]`)
 }
-export type GetFilesNeedingHashParams = {
-    db: DB
-    hostname: string
-}
-export function getFilesNeedingHash({
-    db,
-    hostname,
-}: GetFilesNeedingHashParams) {
-    return db.query<[path: string, size: number, modifyTime: number]>(`
-select path, size, modifyTime
-    from [files_Log]
-    where isArchived = 0
-        and hostname = ?
-        and hash is null
-        `, [hostname])
-}
