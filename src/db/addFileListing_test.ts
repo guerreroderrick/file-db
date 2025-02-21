@@ -2,7 +2,6 @@ import { assert } from '@std/assert/assert'
 import { DB } from '../../deps.ts'
 import { FileEntry } from './../listFiles.ts'
 import { assertEquals } from '@std/assert/equals'
-import { assertThrows } from '@std/assert/throws'
 
 const testDb = new DB((import.meta.dirname??'.') + '/../.test.sqlite3')
 
@@ -54,103 +53,6 @@ select size, version, isArchived
         [456, 1, 1],
         [789, 2, 0],
     ])
-})
-
-Deno.test(function testUpdateConflictingHashThrows() {
-    const hash = 'B14D7728A0F027B92BED01C1B9B494DE71BDB4565A16D8AC013C027090162CA5'
-
-    initAndClearFileTable(testDb)
-    testDb.execute(`
-insert into [files_Log] (hostname, path, version, size, modifyTime, hash)
-    values (
-        'test-hostname'
-        , 'parent/test.txt', 0, 123, 456
-        , 'other-hash'
-        )
-        `)
-
-    const action = () => updateFileHash({
-        db: testDb,
-        hostname: 'test-hostname',
-        file: ["parent/test.txt", 123, 456],
-        hash,
-    })
-    assertThrows(action, Error, 'Conflicting information')
-})
-
-Deno.test(function testUpdateHashDifferentAttributesAdds() {
-    const hash = 'B14D7728A0F027B92BED01C1B9B494DE71BDB4565A16D8AC013C027090162CA5'
-
-    initAndClearFileTable(testDb)
-    testDb.execute(`
-insert into [files_Log] (hostname, path, version, size, modifyTime, hash)
-    values (
-        'test-hostname'
-        , 'parent/test.txt', 0, 123, 456
-        , 'other-hash'
-        )
-        `)
-
-    updateFileHash({
-        db: testDb,
-        hostname: 'test-hostname',
-        file: ["parent/test.txt", 123, 457],
-        hash,
-    })
-
-    const rows = testDb.query<[modifyAt: number, hash: string | null]>(`
-select modifyTime, hash
-    from [files_Log]
-    where hostname = 'test-hostname'
-        and path = 'parent/test.txt'
-    order by version
-        `)
-    assertEquals(rows, [[456, 'other-hash'], [457, hash]])
-})
-
-Deno.test(function testUpdateHashSameHashIgnored() {
-    const hash = 'B14D7728A0F027B92BED01C1B9B494DE71BDB4565A16D8AC013C027090162CA5'
-
-    initAndClearFileTable(testDb)
-    testDb.execute(`
-insert into [files_Log] (hostname, path, version, size, modifyTime, hash)
-    values ('test-hostname'
-        , 'parent/test.txt', 0, 123, 456
-        , '${hash}'
-        )
-        `)
-
-    updateFileHash({
-        db: testDb,
-        hostname: 'test-hostname',
-        file: ["parent/test.txt", 123, 457],
-        hash,
-    })
-    const rows = testDb.query<[modifyAt: number, hash: string | null]>(`
-select modifyTime, hash
-    from [files_Log]
-    where hostname = 'test-hostname'
-        and path = 'parent/test.txt'
-    order by version
-        `)
-    assertEquals(rows, [[456, hash]])
-})
-
-Deno.test(function testUpdateHashAddsHash() {
-    const hash = 'B14D7728A0F027B92BED01C1B9B494DE71BDB4565A16D8AC013C027090162CA5'
-
-    initAndClearFileTable(testDb)
-    updateFileHash({
-        db: testDb,
-        hostname: 'test-hostname',
-        file: ["parent/test.txt", 123, 456],
-        hash,
-    })
-    const rows = testDb.query<[hash: string]>(`
-select hash
-    from [files_Log]
-        `)
-    assertEquals(rows, [[hash]])
 })
 
 Deno.test(function testGetFilesNeedingHash() {
@@ -228,7 +130,7 @@ insert into [files_Log] (hostname, path, version, size, modifyTime)
     })
 }
 
-function initAndClearFileTable(db: DB) {
+export function initTable_files_Log(db: DB) {
     db.execute(`
         create table if not exists [files_Log] (
             hostname text not null
@@ -240,17 +142,27 @@ function initAndClearFileTable(db: DB) {
             , hash bytea null
             , primary key (hostname, path, version)
             )
-        ; delete from [files_Log]
         `)
 }
 
-type UpdateFileHashParams = {
+export function dbTestData() {
+    return {
+        testDb,
+        initAndClearFileTable,
+    }
+}
+function initAndClearFileTable(db: DB) {
+    initTable_files_Log(db)
+    db.execute(`delete from [files_Log]`)
+}
+
+export type UpdateFileHashParams = {
     db: DB
     hostname: string
     file: FileEntry
     hash: string
 }
-function updateFileHash({
+export function updateFileHash({
     db,
     hostname,
     file: [path, size, modifyTime],
