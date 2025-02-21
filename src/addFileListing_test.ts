@@ -2,6 +2,7 @@ import { assert } from "@std/assert/assert";
 import { DB } from "../deps.ts";
 import { FileEntry } from "./listFiles.ts";
 import { assertEquals } from "@std/assert/equals";
+import { assertThrows } from "@std/assert/throws";
 
 const testDb = new DB((import.meta.dirname??'.') + '/../.test.sqlite3')
 
@@ -55,6 +56,130 @@ select size, version, isArchived
     ])
 })
 
+Deno.test(function testUpdateConflictingHashThrows() {
+    const hash = 'B14D7728A0F027B92BED01C1B9B494DE71BDB4565A16D8AC013C027090162CA5'
+
+    initAndClearFileTable(testDb)
+    testDb.execute(`
+insert into [files_Log] (hostname, path, version, size, modifyTime, hash)
+    values (
+        'test-hostname'
+        , 'parent/test.txt', 0, 123, 456
+        , 'other-hash'
+        )
+        `)
+
+    const action = () => updateFileHash({
+        db: testDb,
+        hostname: 'test-hostname',
+        file: ["parent/test.txt", 123, 456],
+        hash,
+    })
+    assertThrows(action, Error, 'Conflicting information')
+})
+
+Deno.test(function testUpdateHashDifferentAttributesAdds() {
+    const hash = 'B14D7728A0F027B92BED01C1B9B494DE71BDB4565A16D8AC013C027090162CA5'
+
+    initAndClearFileTable(testDb)
+    testDb.execute(`
+insert into [files_Log] (hostname, path, version, size, modifyTime, hash)
+    values (
+        'test-hostname'
+        , 'parent/test.txt', 0, 123, 456
+        , 'other-hash'
+        )
+        `)
+
+    updateFileHash({
+        db: testDb,
+        hostname: 'test-hostname',
+        file: ["parent/test.txt", 123, 457],
+        hash,
+    })
+
+    const rows = testDb.query<[modifyAt: number, hash: string | null]>(`
+select modifyTime, hash
+    from [files_Log]
+    where hostname = 'test-hostname'
+        and path = 'parent/test.txt'
+    order by version
+        `)
+    assertEquals(rows, [[456, 'other-hash'], [457, hash]])
+})
+
+Deno.test(function testUpdateHashSameHashIgnored() {
+    const hash = 'B14D7728A0F027B92BED01C1B9B494DE71BDB4565A16D8AC013C027090162CA5'
+
+    initAndClearFileTable(testDb)
+    testDb.execute(`
+insert into [files_Log] (hostname, path, version, size, modifyTime, hash)
+    values ('test-hostname'
+        , 'parent/test.txt', 0, 123, 456
+        , '${hash}'
+        )
+        `)
+
+    updateFileHash({
+        db: testDb,
+        hostname: 'test-hostname',
+        file: ["parent/test.txt", 123, 457],
+        hash,
+    })
+    const rows = testDb.query<[modifyAt: number, hash: string | null]>(`
+select modifyTime, hash
+    from [files_Log]
+    where hostname = 'test-hostname'
+        and path = 'parent/test.txt'
+    order by version
+        `)
+    assertEquals(rows, [[456, hash]])
+})
+
+Deno.test(function testUpdateHashAddsHash() {
+    const hash = 'B14D7728A0F027B92BED01C1B9B494DE71BDB4565A16D8AC013C027090162CA5'
+
+    initAndClearFileTable(testDb)
+    updateFileHash({
+        db: testDb,
+        hostname: 'test-hostname',
+        file: ["parent/test.txt", 123, 456],
+        hash,
+    })
+    const rows = testDb.query<[hash: string]>(`
+select hash
+    from [files_Log]
+        `)
+    assertEquals(rows, [[hash]])
+})
+
+Deno.test(function testGetFilesNeedingHash() {
+    initAndClearFileTable(testDb)
+
+    updateFileHash({
+        db: testDb,
+        hostname: 'test-hostname',
+        file: ["parent/test.txt", 123, 456],
+        hash: 'hash1',
+    })
+    addFileListing({
+        db: testDb,
+        hostname: 'test-hostname',
+        file: ["parent/test2.txt", 123, 456],
+    })
+    addFileListing({
+        db: testDb,
+        hostname: 'test-hostname2',
+        file: ["parent/test3.txt", 123, 456],
+    })
+
+    const filesNeedingHash = getFilesNeedingHash({
+        db: testDb,
+        hostname: 'test-hostname',
+    })
+    assertEquals(filesNeedingHash, [["parent/test2.txt", 123, 456]])
+})
+
 type addFileListingParams = {
     db: DB
     hostname: string
@@ -88,16 +213,19 @@ insert into [files_Log] (hostname, path, version, size, modifyTime)
         return
     }
 
-    db.query(`
+    db.transaction(() => {
+        db.query(`
 update [files_Log] set isArchived = true
     where hostname = ?
         and path = ?
         and version = ?
-        `, [hostname, path, version])
-    db.query(`
-; insert into [files_Log] (hostname, path, version, size, modifyTime)
+        and isArchived = false
+            `, [hostname, path, version])
+        db.query(`
+insert into [files_Log] (hostname, path, version, size, modifyTime)
     values (?, ?, ?, ?, ?)
-    `, [hostname, path, version + 1, size, modifyTime])
+            `, [hostname, path, version + 1, size, modifyTime])
+    })
 }
 
 function initAndClearFileTable(db: DB) {
@@ -114,4 +242,85 @@ function initAndClearFileTable(db: DB) {
             )
         ; delete from [files_Log]
         `)
+}
+
+type UpdateFileHashParams = {
+    db: DB
+    hostname: string
+    file: FileEntry
+    hash: string
+}
+function updateFileHash({
+    db,
+    hostname,
+    file: [path, size, modifyTime],
+    hash,
+}: UpdateFileHashParams) { db.transaction(() => {
+    const existingAttr = db
+        .query<[version: number, size: number, modifyTime: number, hash: string]>(`
+select version, size, modifyTime, hash
+    from [files_Log]
+    where isArchived = 0
+        and hostname = ?
+        and path = ?
+        `, [hostname, path])
+
+    assert(existingAttr.length <= 1, `Expected at most one file entry for ${hostname}:${path}, but found ${existingAttr.length} rows`)
+    let version: number | undefined
+    if (existingAttr.length === 1) {
+        const [[existingVersion, existingSize, existingModifyTime, existingHash]] = existingAttr
+        if (hash === existingHash) { return }
+
+        version = existingVersion
+        if (existingSize === size
+            && existingModifyTime === modifyTime
+            && existingHash === null
+        ) {
+            db.query(`
+update [files_Log] set hash = ?
+    where hostname = ?
+        and path = ?
+        and version = ?
+                `, [hash, hostname, path, existingVersion])
+            return
+        }
+
+        if (existingSize === size
+            && existingModifyTime === modifyTime
+            && existingHash !== null
+        ) {
+            const comparison = {
+                sizes: [existingSize, size],
+                modifyTimes: [existingModifyTime, modifyTime],
+                hashes: [existingHash, hash],
+            }
+            throw new Error(`Conflicting information for ${hostname}:${path}
+    ${JSON.stringify(comparison, null, 2)}
+        `)
+        }
+    }
+
+    const nextVersion = version === undefined ? 0 : version + 1
+    db.query(`
+insert into [files_Log] (hostname, path, version, size, modifyTime, hash)
+    values (?, ?, ?, ?, ?, ?)
+        `, [hostname, path, nextVersion, size, modifyTime, hash])
+
+})}
+
+type GetFilesNeedingHashParams = {
+    db: DB
+    hostname: string
+}
+function getFilesNeedingHash({
+    db,
+    hostname,
+}: GetFilesNeedingHashParams) {
+    return db.query<[path: string, size: number, modifyTime: number]>(`
+select path, size, modifyTime
+    from [files_Log]
+    where isArchived = 0
+        and hostname = ?
+        and hash is null
+        `, [hostname])
 }
