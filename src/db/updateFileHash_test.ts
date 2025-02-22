@@ -1,7 +1,7 @@
 import { assertThrows } from '@std/assert/throws'
-import { dbTestData } from "./addFileListing_test.ts";
 import { assertEquals } from "@std/assert/equals";
 import { updateFileHash } from "./updateFileHash.ts";
+import { dbTestData } from "./__test_dbTestData.ts";
 
 const {
     testDb,

@@ -1,4 +1,4 @@
-import { assert } from "@std/assert/assert";
+import { assert } from 'jsr:@std/assert/assert'
 
 export type FileEntry = [
     path: string,

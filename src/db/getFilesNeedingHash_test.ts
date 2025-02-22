@@ -1,8 +1,8 @@
 import { assertEquals } from '@std/assert/equals'
-import { dbTestData, } from './addFileListing_test.ts'
 import { updateFileHash } from './updateFileHash.ts'
 import { getFilesNeedingHash } from './getFilesNeedingHash.ts'
 import { addFileListing } from "./addFileListing.ts";
+import { dbTestData } from "./__test_dbTestData.ts";
 
 const { 
     testDb,

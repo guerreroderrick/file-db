@@ -1,6 +1,6 @@
-import { assert } from "@std/assert/assert";
-import { DB } from "../../deps.ts";
-import { FileEntry } from "../listFiles.ts";
+import { assert } from 'jsr:@std/assert/assert'
+import { DB } from '../../deps.ts'
+import { FileEntry } from '../listFiles.ts'
 
 export type addFileListingParams = {
     db: DB

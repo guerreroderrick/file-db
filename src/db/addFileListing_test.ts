@@ -1,10 +1,14 @@
-import { assert } from '@std/assert/assert'
-import { DB } from '../../deps.ts'
+import { assert } from 'jsr:@std/assert/assert'
 import { FileEntry } from './../listFiles.ts'
-import { assertEquals } from '@std/assert/equals'
-import { addFileListing } from "./addFileListing.ts";
+import { assertEquals } from 'jsr:@std/assert/equals'
+import { addFileListing } from "./addFileListing.ts"
+import { updateFileHash } from "./updateFileHash.ts"
+import { dbTestData } from "./__test_dbTestData.ts"
 
-const testDb = new DB((import.meta.dirname??'.') + '/../.test.sqlite3')
+const {
+    testDb,
+    initAndClearFileTable,
+} = dbTestData()
 
 Deno.test(function testAddFileListing() {
     const testFile: FileEntry = ["parent/test.txt", 123, 456]
@@ -34,6 +38,28 @@ Deno.test(function testUpdateFileListing() {
     })
 })
 
+Deno.test(function testUpdateFileListingSameIgnored() {
+    const testFile: FileEntry = ["parent/test.txt", 123, 456]
+
+    initAndClearFileTable(testDb)
+    updateFileHash({
+        db: testDb,
+        hostname: 'test-hostname',
+        file: testFile,
+        hash: 'some-hash',
+    })
+    addFileListing({
+        db: testDb,
+        hostname: 'test-hostname',
+        file: testFile,
+    })
+    const versions = testDb.query<[version: number, hash: string]>(`
+select version, hash
+    from [files_Log]
+        `)
+    assertEquals(versions, [[0, 'some-hash']])
+})
+
 Deno.test(function testPreviousVersionsAreArchived() {
     const testFile: FileEntry = ["parent/test.txt", 123, 456]
     const update1: FileEntry = ["parent/test.txt", 456, 789]
@@ -55,29 +81,3 @@ select size, version, isArchived
         [789, 2, 0],
     ])
 })
-
-export function initTable_files_Log(db: DB) {
-    db.execute(`
-        create table if not exists [files_Log] (
-            hostname text not null
-            , path text not null
-            , version bigint not null
-            , isArchived bit not null default 0
-            , size integer not null
-            , modifyTime datetime not null
-            , hash bytea null
-            , primary key (hostname, path, version)
-            )
-        `)
-}
-
-export function dbTestData() {
-    return {
-        testDb,
-        initAndClearFileTable,
-    }
-}
-function initAndClearFileTable(db: DB) {
-    initTable_files_Log(db)
-    db.execute(`delete from [files_Log]`)
-}

@@ -1,6 +1,6 @@
-import { assert } from "@std/assert/assert";
-import { FileEntry } from "../listFiles.ts";
-import { DB } from "../../deps.ts";
+import { assert } from 'jsr:@std/assert/assert'
+import { FileEntry } from '../listFiles.ts'
+import { DB } from '../../deps.ts'
 
 export type UpdateFileHashParams = {
     db: DB
