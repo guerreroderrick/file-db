@@ -11,15 +11,13 @@ export function addFileListing({
     db,
     hostname,
     file: [path, size, modifyTime],
-}: addFileListingParams) {
+}: addFileListingParams) { db.transaction(() => {
     const existingAttr = db.query<[version: number, size: number, modifyTime: number]>(`
 select version, size, modifyTime
-    from (select *, row_number() over (order by version desc) [RowNum]
-        from [files_Log]
-        where hostname = ?
-            and path = ?
-        ) f
-    where f.RowNum = 1
+    from [files_Log]
+    where isArchived = 0
+        and hostname = ?
+        and path = ?
         `, [hostname, path])
     assert(existingAttr.length <= 1, `Expected at most one file entry for ${hostname}:${path}, but found ${existingAttr.length} rows`)
 
@@ -35,17 +33,15 @@ insert into [files_Log] (hostname, path, version, size, modifyTime)
         return
     }
 
-    db.transaction(() => {
-        db.query(`
+    db.query(`
 update [files_Log] set isArchived = true
-    where hostname = ?
-        and path = ?
-        and version = ?
-        and isArchived = false
-            `, [hostname, path, version])
-        db.query(`
+where hostname = ?
+    and path = ?
+    and version = ?
+    and isArchived = false
+        `, [hostname, path, version])
+    db.query(`
 insert into [files_Log] (hostname, path, version, size, modifyTime)
-    values (?, ?, ?, ?, ?)
-            `, [hostname, path, version + 1, size, modifyTime])
-    })
-}
+values (?, ?, ?, ?, ?)
+        `, [hostname, path, version + 1, size, modifyTime])
+})}
