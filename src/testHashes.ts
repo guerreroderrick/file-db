@@ -5,6 +5,7 @@ import { DIGEST_ALGORITHM_NAMES } from "jsr:@std/crypto/crypto";
 import { getSizeDescription } from "./getSizeDescription.ts";
 import { performRegularCleanup, registerProcessCleanup } from "./registerProcessCleanup.ts";
 import { listFiles, listFilesSync } from "./listFiles.ts";
+import { externalHash } from "./hash/externalHash.ts";
 
 if (import.meta.main) {
     registerProcessCleanup(() => {})
@@ -52,7 +53,7 @@ async function main(args: string[]) {
     const goHashFiles: [hash: string, file: string][] = []
     if (includeExternalTest) {
         const goStartTime = Date.now()
-        const goResult = await externalHash(fileList)
+        const goResult = await externalHash({ fileList })
         console.log(`Go hash time: ${Date.now() - goStartTime}ms`)
         goHashFiles.push(...goResult)
     }
@@ -111,14 +112,20 @@ async function main(args: string[]) {
 
         let startTime = Date.now()
         for (let i = 0; i < smallIterations; i++) {
-            const hash = await externalHash([smallestFile[0]], true)
+            const hash = await externalHash({
+                    fileList: [smallestFile[0]],
+                    forceStdin: true,
+                })
             assertEquals(hash[0][0], smallestHash)
         }
         console.log(`Small file (${smallestSize})x${smallIterations} external hash time stdin: ${Date.now() - startTime}ms`)
 
         startTime = Date.now()
         for (let i = 0; i < smallIterations; i++) {
-            const hash = await externalHash([smallestFile[0]], false)
+            const hash = await externalHash({
+                    fileList: [smallestFile[0]],
+                    forceStdin: false,
+                })
             assertEquals(hash[0][0], smallestHash)
         }
         console.log(`Small file (${smallestSize})x${smallIterations} external hash time arg: ${Date.now() - startTime}ms`)
@@ -132,14 +139,20 @@ async function main(args: string[]) {
 
         startTime = Date.now()
         for (let i = 0; i < largeIterations; i++) {
-            const hash = await externalHash([largestFile[0]], true)
+            const hash = await externalHash({
+                    fileList: [largestFile[0]],
+                    forceStdin: true
+                })
             assertEquals(hash[0][0], largestHash)
         }
         console.log(`Large file (${largestSize})x${largeIterations} external hash time stdin: ${Date.now() - startTime}ms`)
 
         startTime = Date.now()
         for (let i = 0; i < largeIterations; i++) {
-            const hash = await externalHash([largestFile[0]], false)
+            const hash = await externalHash({
+                    fileList: [largestFile[0]],
+                    forceStdin: false,
+                })
             assertEquals(hash[0][0], largestHash)
         }
         console.log(`Large file (${largestSize})x${largeIterations} external hash time arg: ${Date.now() - startTime}ms`)
@@ -151,59 +164,4 @@ async function main(args: string[]) {
         }
         console.log(`Large file (${largestSize})x${largeIterations} internal hash time: ${Date.now() - startTime}ms`)
     }
-}
-
-async function externalHash(fileList: string[], forceStdin = false) {
-    const useStdIn = forceStdin || fileList.length > 8
-
-    const launch = useStdIn
-        ? async () => {
-            const cmd = new Deno.Command('./go/file-db-go.exe', {
-                args: ['hash-files', '-'],
-                stdin: 'piped',
-                stdout: 'piped',
-            })
-            const child = cmd.spawn()
-            assert(child.stdin !== null)
-            const writer = child.stdin.getWriter()
-            await writer.write(new TextEncoder().encode(fileList.join('\n')))
-            await writer.close()
-            return child
-        } : () => {
-            const cmd = new Deno.Command('./go/file-db-go.exe', {
-                args: ['hash-files', ...fileList],
-                stdin: 'piped',
-                stdout: 'piped',
-            })
-            const child = cmd.spawn()
-            return child
-        }
-    
-    const child = await launch()
-    const results = await Promise.all([
-        child.status,
-        readLines(child.stdout),
-    ])
-    assert(results[1].length === fileList.length, `Expected ${fileList.length} results, got ${results[1].length}`)
-    const [status, hashes] = results
-    assert(status.success, `External process failed with status: ${status.code}`)
-    return hashes
-}
-
-async function readLines(stdout: ReadableStream<Uint8Array>) {
-    const results: [hash: string, file: string][] = []
-    const decoder = new TextDecoder()
-    const reader = stdout.getReader()
-    while (true) {
-        const { value, done } = await reader.read()
-        if (done) break
-
-        const buffer = decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        for (const line of lines.filter((line) => line.length > 0)) {
-            const [hash, file] = line.split('\t')
-            results.push([hash, file])
-        }
-    }
-    return results
 }
