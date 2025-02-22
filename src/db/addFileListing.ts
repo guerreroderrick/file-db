@@ -11,9 +11,9 @@ export function addFileListing({
     db,
     hostname,
     file: [path, size, modifyTime],
-}: addFileListingParams) { db.transaction(() => {
-    const existingAttr = db.query<[version: number, size: number, modifyTime: number]>(`
-select version, size, modifyTime
+}: addFileListingParams) { return db.transaction(() => {
+    const existingAttr = db.query<[version: number, size: number, modifyTime: number, hash: string]>(`
+select version, size, modifyTime, hash
     from [files_Log]
     where isArchived = 0
         and hostname = ?
@@ -26,11 +26,15 @@ select version, size, modifyTime
 insert into [files_Log] (hostname, path, version, size, modifyTime)
     values (?, ?, 0, ?, ?)
             `, [hostname, path, size, modifyTime])
-        return
+        return {
+            hash: null,
+        }
     }
-    const [[version, existingSize, existingModifyTime]] = existingAttr
+    const [[version, existingSize, existingModifyTime, existingHash]] = existingAttr
     if (existingSize === size && existingModifyTime === modifyTime) {
-        return
+        return {
+            hash: existingHash,
+        }
     }
 
     db.query(`
@@ -44,4 +48,7 @@ where hostname = ?
 insert into [files_Log] (hostname, path, version, size, modifyTime)
 values (?, ?, ?, ?, ?)
         `, [hostname, path, version + 1, size, modifyTime])
+    return {
+        hash: null,
+    }
 })}

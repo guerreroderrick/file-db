@@ -14,11 +14,12 @@ Deno.test(function testAddFileListing() {
     const testFile: FileEntry = ["parent/test.txt", 123, 456]
 
     initAndClearFileTable(testDb)
-    addFileListing({
+    const { hash } = addFileListing({
         db: testDb,
         hostname: 'test-hostname',
         file: testFile,
     })
+    assertEquals(hash, null)
 })
 
 Deno.test(function testUpdateFileListing() {
@@ -48,7 +49,7 @@ Deno.test(function testUpdateFileListingSameIgnored() {
         file: testFile,
         hash: 'some-hash',
     })
-    addFileListing({
+    const { hash } = addFileListing({
         db: testDb,
         hostname: 'test-hostname',
         file: testFile,
@@ -58,6 +59,7 @@ select version, hash
     from [files_Log]
         `)
     assertEquals(versions, [[0, 'some-hash']])
+    assertEquals(hash, 'some-hash') 
 })
 
 Deno.test(function testPreviousVersionsAreArchived() {
