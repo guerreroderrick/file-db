@@ -39,11 +39,11 @@ function syncFileDb(args: string[]) {
             hostname,
             file,
         })
-        const [ path ] = file
+        const [ path, size ] = file
 
-        if (existingHash === null) {
+        if (existingHash === null && size > 0) {
             const hash = getFileHashSync(path)
-            console.log({ path, hash })
+            console.log({ path, size, hash })
             updateFileHash({
                 db,
                 hostname,
