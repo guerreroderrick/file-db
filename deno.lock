@@ -8,6 +8,7 @@
     "jsr:@std/encoding@*": "1.0.7",
     "jsr:@std/fs@^1.0.9": "1.0.11",
     "jsr:@std/internal@^1.0.5": "1.0.5",
+    "jsr:@std/path@*": "1.0.8",
     "jsr:@std/path@^1.0.8": "1.0.8",
     "jsr:@std/testing@*": "1.0.9",
     "npm:@types/node@*": "22.12.0"
@@ -28,7 +29,7 @@
     "@std/fs@1.0.11": {
       "integrity": "ba674672693340c5ebdd018b4fe1af46cb08741f42b4c538154e97d217b55bdd",
       "dependencies": [
-        "jsr:@std/path"
+        "jsr:@std/path@^1.0.8"
       ]
     },
     "@std/internal@1.0.5": {
@@ -43,7 +44,7 @@
         "jsr:@std/assert@^1.0.10",
         "jsr:@std/fs",
         "jsr:@std/internal",
-        "jsr:@std/path"
+        "jsr:@std/path@^1.0.8"
       ]
     }
   },
