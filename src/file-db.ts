@@ -20,20 +20,42 @@ async function main(args: string[]) {
     }
 }
 
-
-function parseArgs(args: string[]): RunMainParams {
+export function parseArgs(args: string[]): RunMainParams {
+    const usage = () => {
+        assert(false, `Usage: file-db [options] <file-path>`)
+    }
+    const normalizeIndex = args.findIndex(arg => arg.toLowerCase() === '--normalize')
+    if (normalizeIndex !== -1) {
+        args.splice(normalizeIndex, 1)
+        return { paramSet: 'normalize' }
+    }
     if (args.length !== 1) {
-        assert(false, `Usage: file-db <file-path>`)
+        usage()
     }
 
     const [filePath] = args
-    return { filePath }
+    return { paramSet: 'sync', filePath, }
 }
 type RunMainParams = {
+    paramSet: 'sync'
     filePath: string
+} | {
+    paramSet: 'normalize'
 }
-async function runMain({ filePath }: RunMainParams) {
-    await syncFileDb(filePath)
+
+async function runMain(params: RunMainParams) {
+    switch (params.paramSet) {
+        case 'sync': {
+            const { filePath } = params
+            await syncFileDb(filePath)
+            return
+        }
+        case 'normalize': {
+            console.error(`--normalize not yet implemented`)
+            return
+        }
+        default: assertNever(params)
+    }
 }
 
 function syncFileDb(filePath: string) {
@@ -67,4 +89,8 @@ function syncFileDb(filePath: string) {
 
 function getLocalPath(importMeta: ImportMeta, path: string) {
     return (importMeta.dirname ?? '.') + path
+}
+
+function assertNever(_: never): never {
+    throw new Error(`Unexpected object: ${_}`)
 }
