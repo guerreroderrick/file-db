@@ -13,19 +13,30 @@ if (import.meta.main) {
 
 async function main(args: string[]) {
     try {
-        await syncFileDb(args)
+        const params = parseArgs(args)
+        await runMain(params)
     } finally {
         performRegularCleanup()
     }
 }
 
-function syncFileDb(args: string[]) {
+
+function parseArgs(args: string[]): RunMainParams {
     if (args.length !== 1) {
         assert(false, `Usage: file-db <file-path>`)
     }
 
     const [filePath] = args
+    return { filePath }
+}
+type RunMainParams = {
+    filePath: string
+}
+async function runMain({ filePath }: RunMainParams) {
+    await syncFileDb(filePath)
+}
 
+function syncFileDb(filePath: string) {
     const files = listFilesSync(filePath)
     const hostname = Deno.hostname()
     console.log({ hostname, fileCount: files.length })
