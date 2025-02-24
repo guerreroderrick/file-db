@@ -6,6 +6,8 @@ import { DB } from "../deps.ts";
 import { getFileHashSync } from "./getFileHash.ts";
 import { initTable_files_Log } from "./db/initSchema.ts";
 import { updateFileHash } from "./db/updateFileHash.ts";
+import { assertNever } from "./util/assertNever.ts";
+import { getLocalPath } from "./path/getLocalPath.ts";
 
 if (import.meta.main) {
     await main(Deno.args)
@@ -85,12 +87,4 @@ function syncFileDb(filePath: string) {
             })
         }
     }
-}
-
-function getLocalPath(importMeta: ImportMeta, path: string) {
-    return (importMeta.dirname ?? '.') + path
-}
-
-function assertNever(_: never): never {
-    throw new Error(`Unexpected object: ${_}`)
 }
