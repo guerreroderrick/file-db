@@ -14,7 +14,7 @@ if (import.meta.main) {
 async function main(args: string[]) {
     try {
         const params = parseArgs(args)
-        await runMain(params)
+        await runParameterSet(params)
     } finally {
         performRegularCleanup()
     }
@@ -43,7 +43,7 @@ type RunMainParams = {
     paramSet: 'normalize'
 }
 
-async function runMain(params: RunMainParams) {
+async function runParameterSet(params: RunMainParams) {
     switch (params.paramSet) {
         case 'sync': {
             const { filePath } = params
