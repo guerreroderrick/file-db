@@ -1,9 +1,15 @@
 import { DB } from '../../deps.ts'
 import { registerProcessCleanup } from '../registerProcessCleanup.ts'
+import { once } from "../util/once.ts";
 import { initTable_files_Log } from './initSchema.ts'
 import * as path from 'jsr:@std/path'
 
 export function getDefaultDatabase() {
+    return lazy_getDefaultDatabase()
+}
+
+const lazy_getDefaultDatabase = once(_getDefaultDatabase)
+function _getDefaultDatabase() {
     const dbPath = path.join(Deno.cwd(), 'file-db.sqlite3')
     console.log({
         debug: `Opening database`,
