@@ -1,7 +1,7 @@
 import { DB } from '../../deps.ts'
 import { registerProcessCleanup } from '../registerProcessCleanup.ts'
 import { once } from "../util/once.ts";
-import { initTable_files_Log } from './initSchema.ts'
+import { initSchema } from './initSchema.ts'
 import * as path from 'jsr:@std/path'
 
 export function getDefaultDatabase() {
@@ -16,7 +16,7 @@ function _getDefaultDatabase() {
         dbPath,
     })
     const db = new DB(dbPath)
-    initTable_files_Log(db)
+    initSchema(db)
     registerProcessCleanup(() => {
         db.close()
         console.log({
