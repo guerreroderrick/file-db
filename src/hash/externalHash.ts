@@ -9,16 +9,19 @@ const externalHashCommand = ((p: string) => {
 export type ExternalHashParams = {
     fileList: string[]
     forceStdin?: boolean
+    commandPath?: string
 }
 export async function externalHash({
     fileList,
     forceStdin = false,
+    commandPath,
 }: ExternalHashParams) {
     const useStdIn = forceStdin || fileList.length > 8
 
+    commandPath ??= externalHashCommand
     const launch = useStdIn
         ? async () => {
-            const cmd = new Deno.Command(externalHashCommand, {
+            const cmd = new Deno.Command(commandPath, {
                 args: ['hash-files', '-'],
                 stdin: 'piped',
                 stdout: 'piped',
@@ -30,7 +33,7 @@ export async function externalHash({
             await writer.close()
             return child
         } : () => {
-            const cmd = new Deno.Command(externalHashCommand, {
+            const cmd = new Deno.Command(commandPath, {
                 args: ['hash-files', ...fileList],
                 stdin: 'piped',
                 stdout: 'piped',
