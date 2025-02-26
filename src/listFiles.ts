@@ -1,4 +1,5 @@
 import { assert } from 'jsr:@std/assert/assert'
+import { getCanonicalPath } from "./path/getCanonicalPath.ts";
 
 export type FileEntry = [
     path: string,
@@ -30,7 +31,8 @@ export function listFilesSync(rootPath: string) {
     const results: FileEntry[] = []
     const paths = [rootPath]
     while (paths.length > 0) {
-        const path = paths.shift()!
+        const nextPath = paths.shift()!
+        const path = getCanonicalPath(nextPath)
         const stat = Deno.statSync(path)
         if (stat.isDirectory) {
             for (const entry of Deno.readDirSync(path)) {

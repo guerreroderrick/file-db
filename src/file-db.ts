@@ -2,6 +2,8 @@ import { assert } from "@std/assert/assert";
 import { performRegularCleanup } from "./registerProcessCleanup.ts";
 import { assertNever } from "./util/assertNever.ts";
 import { syncFileDb } from "./commands/syncFileDb.ts";
+import { getDefaultDatabase } from "./db/getDefaultDatabase.ts";
+import { getCanonicalPath } from "./path/getCanonicalPath.ts";
 
 if (import.meta.main) {
     await main(Deno.args)
@@ -47,9 +49,31 @@ async function runParameterSet(params: RunMainParams) {
             return
         }
         case 'normalize': {
-            console.error(`--normalize not yet implemented`)
+            await normalizePaths();
             return
         }
         default: assertNever(params)
     }
+}
+
+async function normalizePaths() {
+    const db = getDefaultDatabase()
+    try {
+        db.createFunction((path: string) => {
+            const canonicalPath = getCanonicalPath(path)
+            if (path !== canonicalPath) {
+                console.log(`Normalizing path: ${path} -> ${canonicalPath}`)
+            }
+            return canonicalPath
+        }, { name: 'normalizePath' })
+
+        db.query(`
+update [files_Log] set [path] = normalizePath([path])
+            `)
+        const updateCount = db.changes
+        console.log({ updateCount })
+    } finally {
+        db.deleteFunction('normalizePath')
+    }
+    await Promise.resolve()
 }
