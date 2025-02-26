@@ -1,9 +1,23 @@
 import { DigestAlgorithm } from "jsr:@std/crypto/crypto";
 import { crypto } from 'jsr:@std/crypto'
 import { encodeHex } from 'jsr:@std/encoding/hex'
+import { externalHash } from "./hash/externalHash.ts";
+import { assertEquals } from "@std/assert/equals";
+import * as path from 'jsr:@std/path'
 
 export async function getFileHash(filePath: string, algorithm?: DigestAlgorithm) {
     algorithm ??= 'SHA-256'
+
+    const fileInfo = Deno.statSync(filePath)
+    if (algorithm === 'SHA-256' && fileInfo.size > 1024 * 1024 * 10) {
+        const external = await externalHash({
+            fileList: [filePath],
+            commandPath: path.join(Deno.cwd(), '/go/file-db-go.exe'),
+        })
+        assertEquals(external.length, 1)
+        const [hash] = external[0]
+        return hash
+    }
 
     const file = await Deno.open(filePath, { read: true })
     const stream = file.readable
