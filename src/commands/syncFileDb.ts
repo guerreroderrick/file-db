@@ -1,10 +1,10 @@
 import { addFileListing } from "../db/addFileListing.ts";
 import { getDefaultDatabase } from "../db/getDefaultDatabase.ts";
 import { updateFileHash } from "../db/updateFileHash.ts";
-import { getFileHashSync } from "../getFileHash.ts";
+import { getFileHash } from "../getFileHash.ts";
 import { listFilesSync } from "../listFiles.ts";
 
-export function syncFileDb(filePath: string) {
+export async function syncFileDb(filePath: string) {
     const files = listFilesSync(filePath)
     const hostname = Deno.hostname()
     console.log({ hostname, fileCount: files.length })
@@ -20,7 +20,7 @@ export function syncFileDb(filePath: string) {
         const [ path, size ] = file
 
         if (existingHash === null && size > 0) {
-            const hash = getFileHashSync(path)
+            const hash = await getFileHash(path)
             console.log({ path, size, hash })
             updateFileHash({
                 db,
