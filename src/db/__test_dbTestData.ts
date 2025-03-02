@@ -1,5 +1,5 @@
 import { DB } from "../../deps.ts";
-import { initTable_files_Log } from "./initSchema.ts";
+import { initSchema } from "./initSchema.ts";
 
 const testDb = new DB((import.meta.dirname??'.') + '/../.test.sqlite3')
 
@@ -10,6 +10,6 @@ export function dbTestData() {
     }
 }
 function initAndClearFileTable(db: DB) {
-    initTable_files_Log(db)
+    initSchema(db)
     db.execute(`delete from [files_Log]`)
 }
