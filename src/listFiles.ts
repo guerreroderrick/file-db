@@ -11,7 +11,8 @@ export async function listFiles(rootPath: string) {
     const results: FileEntry[] = []
     const paths = [rootPath]
     while (paths.length > 0) {
-        const path = paths.shift()!
+        const nextPath = paths.shift()!
+        const path = getCanonicalPath(nextPath)
         const stat = await Deno.stat(path)
         if (stat.isDirectory) {
             for await (const entry of Deno.readDir(path)) {
