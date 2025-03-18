@@ -5,7 +5,7 @@ import { DIGEST_ALGORITHM_NAMES } from "jsr:@std/crypto/crypto";
 import { getSizeDescription } from "./getSizeDescription.ts";
 import { performRegularCleanup, registerProcessCleanup } from "./registerProcessCleanup.ts";
 import { listFiles, listFilesSync } from "./listFiles.ts";
-import { externalHash } from "./hash/externalHash.ts";
+import { externalHash, ExternalHasher } from "./hash/externalHash.ts";
 
 if (import.meta.main) {
     registerProcessCleanup(() => {})
@@ -111,6 +111,15 @@ async function main(args: string[]) {
         const largestSize = `${largestSizeDesc.size} ${largestSizeDesc.suffix}B`
 
         let startTime = Date.now()
+        
+        await using hasher = new ExternalHasher({})
+        for (let i = 0; i < smallIterations; i++) {
+            const hash = await hasher.hashFiles([smallestFile[0]])
+            assertEquals(hash[0][0], smallestHash)
+        }
+        console.log(`Small file (${smallestSize})x${smallIterations} external hash time reused: ${Date.now() - startTime}ms`)
+
+        startTime = Date.now()
         for (let i = 0; i < smallIterations; i++) {
             const hash = await externalHash({
                     fileList: [smallestFile[0]],
@@ -136,6 +145,30 @@ async function main(args: string[]) {
             assertEquals(hash, smallestHash)
         }
         console.log(`Small file (${smallestSize})x${smallIterations} internal hash time: ${Date.now() - startTime}ms`)
+
+        const hashers = new Array<number>(largeIterations)
+            .fill(0)
+            .map(() => new ExternalHasher({}))
+        const hashes: Promise<string>[] = []
+        startTime = Date.now()
+        for (let i = 0; i < largeIterations; i++) {
+            hashes.push(
+                hashers[i].hashFiles([largestFile[0]])
+                    .then(([hash]) => hash[0][0])
+            )
+        }
+        await Promise.all(hashes)
+        console.log(`Large file (${largestSize})x${largeIterations} external hash time parallel: ${Date.now() - startTime}ms`)
+        for (const hasher of hashers) {
+            await hasher[Symbol.asyncDispose]()
+        }
+
+        startTime = Date.now()
+        for (let i = 0; i < largeIterations; i++) {
+            const hash = await hasher.hashFiles([largestFile[0]])
+            assertEquals(hash[0][0], largestHash)
+        }
+        console.log(`Large file (${largestSize})x${largeIterations} external hash time reused: ${Date.now() - startTime}ms`)
 
         startTime = Date.now()
         for (let i = 0; i < largeIterations; i++) {
