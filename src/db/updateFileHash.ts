@@ -1,6 +1,6 @@
 import { assert } from 'jsr:@std/assert/assert'
-import { FileEntry } from '../listFiles.ts'
 import { DB } from '../../deps.ts'
+import { FileEntry } from "../listFiles.ts";
 
 export type UpdateFileHashParams = {
     db: DB
@@ -11,7 +11,7 @@ export type UpdateFileHashParams = {
 export function updateFileHash({
     db,
     hostname,
-    file: [path, size, modifyTime],
+    file: {path, size, lastModified: modifyTime, },
     hash,
 }: UpdateFileHashParams) { db.transaction(() => {
     const existingAttr = db

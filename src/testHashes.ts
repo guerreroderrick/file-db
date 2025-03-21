@@ -4,7 +4,7 @@ import { getFileHash, getFileHashSync } from "./getFileHash.ts";
 import { DIGEST_ALGORITHM_NAMES } from "jsr:@std/crypto/crypto";
 import { getSizeDescription } from "./getSizeDescription.ts";
 import { performRegularCleanup, registerProcessCleanup } from "./registerProcessCleanup.ts";
-import { listFiles, listFilesSync } from "./listFiles.ts";
+import { isFileEntry, listFiles, listFilesSync } from "./listFiles.ts";
 import { externalHash, ExternalHasher } from "./hash/externalHash.ts";
 
 if (import.meta.main) {
@@ -42,10 +42,11 @@ async function main(args: string[]) {
     const listFilesAsyncTime = Date.now()
     console.log(`List files async time: ${listFilesAsyncTime - startTime}ms`)
 
-    const fileList = listedFiles.map(([path]) => path)
+    const fileList = listedFiles.map(({ path }) => path)
 
     const syncFileList = listFilesSync(rootPath)
-    const syncFilePaths = syncFileList.map(([path]) => path)
+        .filter(isFileEntry)
+    const syncFilePaths = syncFileList.map(({ path }) => path)
     const listFilesSyncTime = Date.now()
     console.log(`List files sync time: ${listFilesSyncTime - listFilesAsyncTime}ms`)
 
@@ -88,7 +89,7 @@ async function main(args: string[]) {
         const sentinelSmallest: [path: string, size: number] = ['<Invalid>', 0]
 
         const smallestFile = listedFiles
-            .map(([path, size]) => [path, size] as const)
+            .map(({ path, size }) => [path, size] as const)
             .reduce((smallest, [path, size]) => {
                 if (size > 0 && size < (smallest?.[1] ?? Infinity)) {
                     return [path, size]
@@ -96,7 +97,7 @@ async function main(args: string[]) {
                 return smallest
             }, sentinelLargest)
         const largestFile = listedFiles
-            .map(([path, size]) => [path, size] as const)
+            .map(({ path, size }) => [path, size] as const)
             .reduce((largest, [path, size]) => {
                 if (size > (largest?.[1] ?? 0)) {
                     return [path, size]

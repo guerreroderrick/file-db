@@ -1,9 +1,9 @@
 import { assert } from 'jsr:@std/assert/assert'
-import { FileEntry } from './../listFiles.ts'
 import { assertEquals } from 'jsr:@std/assert/equals'
 import { addFileListing } from "./addFileListing.ts"
 import { updateFileHash } from "./updateFileHash.ts"
 import { dbTestData } from "./__test_dbTestData.ts"
+import { FileEntryFromArray } from "./getFilesNeedingHash_test.ts";
 
 const {
     testDb,
@@ -11,7 +11,7 @@ const {
 } = dbTestData()
 
 Deno.test(function testAddFileListing() {
-    const testFile: FileEntry = ["parent/test.txt", 123, 456]
+    const testFile = FileEntryFromArray(["parent/test.txt", 123, 456])
 
     initAndClearFileTable(testDb)
     const { hash } = addFileListing({
@@ -23,8 +23,8 @@ Deno.test(function testAddFileListing() {
 })
 
 Deno.test(function testUpdateFileListing() {
-    const testFile: FileEntry = ["parent/test.txt", 123, 456]
-    const updatedFile: FileEntry = ["parent/test.txt", 456, 789]
+    const testFile =    FileEntryFromArray(["parent/test.txt", 123, 456])
+    const updatedFile = FileEntryFromArray(["parent/test.txt", 456, 789])
 
     initAndClearFileTable(testDb)
     addFileListing({
@@ -40,7 +40,7 @@ Deno.test(function testUpdateFileListing() {
 })
 
 Deno.test(function testUpdateFileListingSameIgnored() {
-    const testFile: FileEntry = ["parent/test.txt", 123, 456]
+    const testFile = FileEntryFromArray(["parent/test.txt", 123, 456])
 
     initAndClearFileTable(testDb)
     updateFileHash({
@@ -63,9 +63,9 @@ select version, hash
 })
 
 Deno.test(function testPreviousVersionsAreArchived() {
-    const testFile: FileEntry = ["parent/test.txt", 123, 456]
-    const update1: FileEntry = ["parent/test.txt", 456, 789]
-    const update2: FileEntry = ["parent/test.txt", 789, 790]
+    const testFile = FileEntryFromArray(["parent/test.txt", 123, 456])
+    const update1 =  FileEntryFromArray(["parent/test.txt", 456, 789])
+    const update2 =  FileEntryFromArray(["parent/test.txt", 789, 790])
 
     initAndClearFileTable(testDb)
     addFileListing({ db: testDb, hostname: 'test-hostname', file: testFile })

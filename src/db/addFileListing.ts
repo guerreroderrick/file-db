@@ -10,7 +10,7 @@ export type addFileListingParams = {
 export function addFileListing({
     db,
     hostname,
-    file: [path, size, modifyTime],
+    file: { path, size, lastModified: modifyTime, },
 }: addFileListingParams) { return db.transaction(() => {
     const existingAttr = db.query<[version: number, size: number, modifyTime: number, hash: string]>(`
 select version, size, modifyTime, hash
