@@ -23,9 +23,9 @@ select version, size, modifyTime, hash
 
     if (existingAttr.length === 0) {
         db.query(`
-insert into [files_Log] (hostname, path, version, size, modifyTime)
-    values (?, ?, 0, ?, ?)
-            `, [hostname, path, size, modifyTime])
+insert into [files_Log] (hostname, path, version, hashTime, size, modifyTime)
+    values (?, ?, 0, ?, ?, ?)
+            `, [hostname, path, Date.now(), size, modifyTime])
         return {
             hash: null,
         }

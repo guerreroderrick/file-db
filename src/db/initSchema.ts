@@ -7,8 +7,8 @@ export type DBVersion = {
 }
 
 const currentVersion: DBVersion = {
-    id: 2n,
-    description: 'Add pathErrors_Log table',
+    id: 3n,
+    description: 'Add files_Log.hashTime column',
     updatedAt: new Date('2025-03-20'),
 }
 
@@ -51,6 +51,7 @@ create table if not exists [files_Log] (
     , version bigint not null
     , isArchived bit not null default 0
     , size integer not null
+    , hashTime datetime null
     , modifyTime datetime not null
     , hash bytea null
     , primary key (hostname, path, version)
@@ -92,6 +93,20 @@ db.transaction(() => {
     switch (`${sourceId}`) {
         case '1':
             initTable_pathErrors_Log(db)
+            /* falls through */
+        case '2':
+            db.query(`
+alter table [files_Log] rename to [files_Log_migrate]
+            `)
+            initTable_files_Log(db)
+            db.query(`
+insert into [files_Log] (hostname, path, version, isArchived, size, hashTime, modifyTime, hash)
+    select hostname, path, version, isArchived, size, null, modifyTime, hash
+        from [files_Log_migrate]
+            `)
+            db.query(`
+drop table [files_Log_migrate]
+            `)
 
             db.query(`
 update [version] set id = ?, description = ?, updatedAt = ?
