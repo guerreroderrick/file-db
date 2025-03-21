@@ -37,7 +37,8 @@ async function main(args: string[]) {
             return match
         })
     
-    const listedFiles = await listFiles(rootPath)
+    const listedFiles = (await listFiles(rootPath))
+        .filter(isFileEntry)
     const listFilesAsyncTime = Date.now()
     console.log(`List files async time: ${listFilesAsyncTime - startTime}ms`)
 
