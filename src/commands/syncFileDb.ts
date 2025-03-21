@@ -2,7 +2,7 @@ import { addFileListing } from "../db/addFileListing.ts";
 import { getDefaultDatabase } from "../db/getDefaultDatabase.ts";
 import { updateFileHash } from "../db/updateFileHash.ts";
 import { getFileHash } from "../getFileHash.ts";
-import { listFilesSync } from "../listFiles.ts";
+import { isFileEntry, listFilesSync } from "../listFiles.ts";
 
 export async function syncFileDb(filePath: string) {
     const files = listFilesSync(filePath)
@@ -11,13 +11,15 @@ export async function syncFileDb(filePath: string) {
 
     const db = getDefaultDatabase();
 
-    for (const file of files) {
+    const accessibleFiles = files
+        .filter(isFileEntry)
+    for (const file of accessibleFiles) {
         const { hash: existingHash } = addFileListing({
             db,
             hostname,
             file,
         })
-        const [ path, size ] = file
+        const { path, size, } = file
 
         if (existingHash === null && size > 0) {
             const hash = await getFileHash(path)

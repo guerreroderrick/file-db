@@ -2,6 +2,7 @@ import { assertThrows } from '@std/assert/throws'
 import { assertEquals } from "@std/assert/equals";
 import { updateFileHash } from "./updateFileHash.ts";
 import { dbTestData } from "./__test_dbTestData.ts";
+import { FileEntryFromArray } from "./getFilesNeedingHash_test.ts";
 
 const {
     testDb,
@@ -24,7 +25,7 @@ insert into [files_Log] (hostname, path, version, size, modifyTime, hash)
     const action = () => updateFileHash({
         db: testDb,
         hostname: 'test-hostname',
-        file: ["parent/test.txt", 123, 456],
+        file: FileEntryFromArray(["parent/test.txt", 123, 456]),
         hash,
     })
     assertThrows(action, Error, 'Conflicting information')
@@ -46,7 +47,7 @@ insert into [files_Log] (hostname, path, version, size, modifyTime, hash)
     updateFileHash({
         db: testDb,
         hostname: 'test-hostname',
-        file: ["parent/test.txt", 123, 457],
+        file: FileEntryFromArray(["parent/test.txt", 123, 457]),
         hash,
     })
 
@@ -75,7 +76,7 @@ insert into [files_Log] (hostname, path, version, size, modifyTime, hash)
     updateFileHash({
         db: testDb,
         hostname: 'test-hostname',
-        file: ["parent/test.txt", 123, 457],
+        file: FileEntryFromArray(["parent/test.txt", 123, 457]),
         hash,
     })
     const rows = testDb.query<[modifyAt: number, hash: string | null]>(`
@@ -95,7 +96,7 @@ Deno.test(function testUpdateHashAddsHash() {
     updateFileHash({
         db: testDb,
         hostname: 'test-hostname',
-        file: ["parent/test.txt", 123, 456],
+        file: FileEntryFromArray(["parent/test.txt", 123, 456]),
         hash,
     })
     const rows = testDb.query<[hash: string]>(`
