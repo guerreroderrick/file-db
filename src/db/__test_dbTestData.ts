@@ -12,4 +12,5 @@ export function dbTestData() {
 function initAndClearFileTable(db: DB) {
     initSchema(db)
     db.execute(`delete from [files_Log]`)
+    db.execute(`delete from [pathErrors_Log]`)
 }

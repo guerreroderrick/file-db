@@ -7,14 +7,13 @@ export type DBVersion = {
 }
 
 const currentVersion: DBVersion = {
-    id: 1n,
-    description: 'Initial version',
-    updatedAt: new Date('2025-02-24T21:27:00-06:00'),
+    id: 2n,
+    description: 'Add pathErrors_Log table',
+    updatedAt: new Date('2025-03-20'),
 }
 
 export function initSchema(db: DB) {
     initTable_version(db)
-    initTable_files_Log(db)
 
     const versionRow = db.query<[id: bigint, description: string, updatedAt: Date]>(`
 select id, description, updatedAt
@@ -59,20 +58,48 @@ create table if not exists [files_Log] (
         `)
 }
 
+function initTable_pathErrors_Log(db: DB) {
+    db.execute(`
+create table if not exists [pathErrors_Log] (
+    hostname text not null
+    , path text not null
+    , scanTime datetime not null
+    , error text not null
+    , primary key (hostname, path, scanTime)
+    )
+        `)
+}
+
 function initEmptyDatabase(db: DB) {
     const { id, description, updatedAt } = currentVersion
     db.query(`
 insert into [version] (id, description, updatedAt)
     values (?, ?, ?)
         `, [id, description, updatedAt])
+
+    initTable_files_Log(db)
+    initTable_pathErrors_Log(db)
 }
 
-function migrateDatabase(_db: DB, sourceVersion: DBVersion) {
+function migrateDatabase(db: DB, sourceVersion: DBVersion) {
     const { id, description, } = currentVersion
     const { id: sourceId, description: sourceDescription, updatedAt: sourceUpdatedAt } = sourceVersion
     console.log({
         debug: `Migrating database from version ${sourceId} (${sourceDescription}) to version ${id} (${description})`,
         sourceUpdatedAt,
     })
-    throw new Error('Migration not implemented yet')
-}
+db.transaction(() => {
+    switch (`${sourceId}`) {
+        case '1':
+            initTable_pathErrors_Log(db)
+
+            db.query(`
+update [version] set id = ?, description = ?, updatedAt = ?
+                `, [id, description, new Date()])
+            /* falls through */
+        case `${currentVersion.id}`:
+            break;
+        default:
+            throw new Error('Migration not implemented yet')
+    }
+})}

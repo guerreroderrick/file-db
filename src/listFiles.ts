@@ -16,6 +16,9 @@ export type ListFileResult = (FileEntry & { isSuccess: true, })
 export function isFileEntry(entry: ListFileResult): entry is FileEntry & { isSuccess: true, } {
     return entry.isSuccess
 }
+export function isPathError(entry: ListFileResult): entry is PathError & { isSuccess: false } {
+    return !entry.isSuccess
+}
 
 export async function listFiles(rootPath: string) {
     const results: ListFileResult[] = []
