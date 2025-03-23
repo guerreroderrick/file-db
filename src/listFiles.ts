@@ -20,6 +20,42 @@ export function isPathError(entry: ListFileResult): entry is PathError & { isSuc
     return !entry.isSuccess
 }
 
+export async function* listFilesIterable(rootPath: string) {
+    const paths = [rootPath]
+    while (paths.length > 0) {
+        const nextPath = paths.shift()!
+        const path = getCanonicalPath(nextPath)
+        const tryStat = await tryCatch(() => Deno.stat(path))
+
+        if ('error' in tryStat) {
+            const pathError: ListFileResult = {
+                isSuccess: false,
+                path,
+                error: tryStat.error,
+            }
+            yield pathError
+            continue
+        }
+        const { result: stat } = tryStat
+        if (stat.isDirectory) {
+            for await (const entry of Deno.readDir(path)) {
+                paths.push(`${path}/${entry.name}`)
+            }
+        } else {
+            const mtime = stat.mtime
+            assert(mtime !== null, `System doesn't provide modify time for ${path}`)
+
+            const fileEntry: ListFileResult = {
+                isSuccess: true,
+                path,
+                size: stat.size,
+                lastModified: mtime.getTime()
+            }
+            yield fileEntry
+        }
+    }
+}
+
 export async function listFiles(rootPath: string) {
     const results: ListFileResult[] = []
     const paths = [rootPath]
