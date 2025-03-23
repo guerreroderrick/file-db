@@ -6,6 +6,17 @@ import { ExternalHasher } from "../hash/externalHash.ts";
 import { isFileEntry, isPathError, listFilesIterable } from "../listFiles.ts";
 import { assertEquals } from "@std/assert/equals";
 
+type SuccessHash = {
+    hash: string
+}
+type HashError = {
+    error: string
+}
+type HashResponse = (SuccessHash | HashError) & {
+    file: string
+    timeMs: number
+}
+
 class PooledHashUpdate {
     private static readonly cleanupSize = 10
     private poolSize: number
@@ -16,7 +27,7 @@ class PooledHashUpdate {
         this.poolSize = poolSize
     }
 
-    requestHash(path: string, callback: (args: [hash: string, timeMs: number]) => void): void {
+    requestHash(path: string, callback: (response: HashResponse) => void): void {
         if (this.hashers.length < this.poolSize) {
             const hasher = new ExternalHasher({})
             this.hashers.push(Promise.resolve([this.hashers.length, hasher]))
@@ -38,7 +49,7 @@ class PooledHashUpdate {
         this.taskQueue = []
         await Promise.allSettled(last)
     }
-    private async placeEntry(path: string, callback: (args: [hash: string, timeMs: number]) => void) {
+    private async placeEntry(path: string, callback: (response: HashResponse) => void) {
         const [index, hasher] = await Promise.race(this.hashers)
         this.hashers[index] = (async () => {
             const start = Date.now()
@@ -46,8 +57,12 @@ class PooledHashUpdate {
             assertEquals(file, path)
     
             const timeMs = Date.now() - start
-            callback([hash, timeMs])
-            return [index, hasher]    
+            if (hash.startsWith('Error: ')) {
+                callback({ error: hash, file, timeMs })
+                return [index, hasher]
+            }
+            callback({ hash, file, timeMs })
+            return [index, hasher]
         })()
     }
 }
@@ -59,10 +74,18 @@ export async function syncFileDb(filePath: string) {
     let numPathErrors = 0
     let numFiles = 0
     await using hasher = new PooledHashUpdate(4)
+    let noOutput = true
+    let lastOutput = Date.now()
+    const encoder = new TextEncoder()
     for await (const entry of listFilesIterable(filePath)) {
+        if (noOutput && Date.now() - lastOutput > 1000) {
+            await Deno.stdout.write(encoder.encode(`\rNumPathErrors: ${numPathErrors}, NumFiles: ${numFiles}...`))
+            lastOutput = Date.now()
+        }
         if (isPathError(entry)) {
             numPathErrors++
             console.log({ pathError: entry.path, })
+            noOutput = false
             addPathError({
                 db,
                 hostname,
@@ -80,7 +103,19 @@ export async function syncFileDb(filePath: string) {
             const { path, size, } = entry
 
             if (existingHash === null && size > 0) {
-                hasher.requestHash(path, ([hash, timeMs]) => {
+                hasher.requestHash(path, (response: HashResponse) => {
+                    noOutput = false
+                    if ('error' in response) {
+                        const { error, file, timeMs, } = response
+                        console.error({ error, file, timeMs, })
+                        addPathError({
+                            db,
+                            hostname,
+                            pathError: { path: file, error, },
+                        })
+                        return
+                    }
+                    const { hash, timeMs, } = response
                     console.log({ path, size, hash, timeMs, })
                     updateFileHash({
                         db,

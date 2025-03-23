@@ -94,8 +94,12 @@ func runHashFiles(args []string) {
 	}
 
 	action := func(file string) {
-		hash := getFileHash(file, func() hash.Hash { return sha256.New() })
-		fmt.Printf("%s\t%s\n", hash, file)
+		hash, err := getFileHash(file, func() hash.Hash { return sha256.New() })
+		if err != nil {
+			fmt.Printf("Error: %s\t%s\n", err, file)
+		} else {
+			fmt.Printf("%s\t%s\n", hash, file)
+		}
 	}
 	if (len(args) == 1) && (args[0] == "-") {
 		scanner := bufio.NewScanner(os.Stdin)
@@ -151,20 +155,20 @@ func hashFiles(files []string, hashFactory func() hash.Hash) {
 	}
 }
 
-func getFileHash(filePath string, hashFactory func() hash.Hash) string {
+func getFileHash(filePath string, hashFactory func() hash.Hash) (string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		log.Panicln(err)
+		return "", err
 	}
 	defer file.Close()
 
 	hasher := hashFactory()
 	_, err = io.Copy(hasher, file)
 	if err != nil {
-		log.Panicln(err)
+		return "", err
 	}
 
 	hashBytes := hasher.Sum(nil)
 	hash := hex.EncodeToString(hashBytes)
-	return hash
+	return hash, nil
 }
