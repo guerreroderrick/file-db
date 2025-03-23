@@ -45,7 +45,12 @@ async function runParameterSet(params: RunMainParams) {
     switch (params.paramSet) {
         case 'sync': {
             const { filePath } = params
-            await syncFileDb(filePath)
+            const { numFiles, numPathErrors } = await syncFileDb(filePath)
+            console.log({
+                debug: 'Sync complete',
+                numFiles,
+                numPathErrors,
+            })
             return
         }
         case 'normalize': {
