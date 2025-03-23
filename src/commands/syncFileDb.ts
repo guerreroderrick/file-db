@@ -16,7 +16,7 @@ class PooledHashUpdate {
         this.poolSize = poolSize
     }
 
-    requestHash(path: string, callback: (hash: string) => void): void {
+    requestHash(path: string, callback: (args: [hash: string, timeMs: number]) => void): void {
         if (this.hashers.length < this.poolSize) {
             const hasher = new ExternalHasher({})
             this.hashers.push(Promise.resolve([this.hashers.length, hasher]))
@@ -38,13 +38,15 @@ class PooledHashUpdate {
         this.taskQueue = []
         await Promise.allSettled(last)
     }
-    private async placeEntry(path: string, callback: (hash: string) => void) {
+    private async placeEntry(path: string, callback: (args: [hash: string, timeMs: number]) => void) {
         const [index, hasher] = await Promise.race(this.hashers)
         this.hashers[index] = (async () => {
+            const start = Date.now()
             const [[hash, file]] = await hasher.hashFiles([path])
             assertEquals(file, path)
     
-            callback(hash)
+            const timeMs = Date.now() - start
+            callback([hash, timeMs])
             return [index, hasher]    
         })()
     }
@@ -78,8 +80,8 @@ export async function syncFileDb(filePath: string) {
             const { path, size, } = entry
 
             if (existingHash === null && size > 0) {
-                hasher.requestHash(path, hash => {
-                    console.log({ path, size, hash })
+                hasher.requestHash(path, ([hash, timeMs]) => {
+                    console.log({ path, size, hash, timeMs, })
                     updateFileHash({
                         db,
                         hostname,
