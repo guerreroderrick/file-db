@@ -74,18 +74,17 @@ export async function syncFileDb(filePath: string) {
     let numPathErrors = 0
     let numFiles = 0
     await using hasher = new PooledHashUpdate(4)
-    let noOutput = true
     let lastOutput = Date.now()
     const encoder = new TextEncoder()
     for await (const entry of listFilesIterable(filePath)) {
-        if (noOutput && Date.now() - lastOutput > 1000) {
+        if (Date.now() - lastOutput > 1000) {
             await Deno.stdout.write(encoder.encode(`\rNumPathErrors: ${numPathErrors}, NumFiles: ${numFiles}...`))
             lastOutput = Date.now()
         }
         if (isPathError(entry)) {
             numPathErrors++
             console.log({ pathError: entry.path, })
-            noOutput = false
+            lastOutput = Date.now()
             addPathError({
                 db,
                 hostname,
@@ -104,10 +103,10 @@ export async function syncFileDb(filePath: string) {
 
             if (existingHash === null && size > 0) {
                 hasher.requestHash(path, (response: HashResponse) => {
-                    noOutput = false
                     if ('error' in response) {
                         const { error, file, timeMs, } = response
                         console.error({ error, file, timeMs, })
+                        lastOutput = Date.now()
                         addPathError({
                             db,
                             hostname,
@@ -117,6 +116,7 @@ export async function syncFileDb(filePath: string) {
                     }
                     const { hash, timeMs, } = response
                     console.log({ path, size, hash, timeMs, })
+                    lastOutput = Date.now()
                     updateFileHash({
                         db,
                         hostname,
