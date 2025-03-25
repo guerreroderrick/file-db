@@ -3,8 +3,8 @@
     "dev": "deno run --watch --allow-read --allow-write src/testHashes.ts",
     "file-db": "deno run --allow-read --allow-write --allow-run --allow-sys src/file-db.ts",
     "testHashes": "deno run --allow-read --allow-run src/testHashes.ts",
-    "test": "deno test --watch --allow-read --allow-write",
-    "test-once": "deno test --allow-read --allow-write",
+    "test": "deno test --watch --allow-read --allow-write --allow-run",
+    "test-once": "deno test --allow-read --allow-write --allow-run",
     "update-test-snapshots": "deno test --allow-read --allow-write -- --update"
   },
   "imports": {

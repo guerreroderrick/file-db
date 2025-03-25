@@ -1,11 +1,15 @@
 import { DigestAlgorithm } from "jsr:@std/crypto/crypto";
 import { crypto } from 'jsr:@std/crypto'
 import { encodeHex } from 'jsr:@std/encoding/hex'
-import { externalHash } from "./hash/externalHash.ts";
+import { externalHash, ExternalHasher } from "./hash/externalHash.ts";
 import { assertEquals } from "@std/assert/equals";
 import * as path from 'jsr:@std/path'
 
-export async function getFileHash(filePath: string, algorithm?: DigestAlgorithm) {
+export async function getFileHash(filePath: string) { // }, algorithm?: DigestAlgorithm) {
+    await using hasher = new ExternalHasher({})
+    const [[hash]] = await hasher.hashFiles([filePath])
+    return hash
+/*
     algorithm ??= 'SHA-256'
 
     const fileInfo = Deno.statSync(filePath)
@@ -25,6 +29,7 @@ export async function getFileHash(filePath: string, algorithm?: DigestAlgorithm)
 
     const hash = encodeHex(hashBytes)
     return hash
+    */
 }
 
 export function getFileHashSync(filePath: string, algorithm?: DigestAlgorithm) {

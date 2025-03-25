@@ -140,9 +140,11 @@ export class ExternalHasher {
 
     async [Symbol.asyncDispose]() {
         assert(this.proxy !== null)
-        const { child, writer } = this.proxy
+        const { child, writer, reader, } = this.proxy
         this.proxy = null
         await writer.close()
         await child.status
+        await child.stdout.cancel()
+
     }
 }
