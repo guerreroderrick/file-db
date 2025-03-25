@@ -38,8 +38,19 @@ export async function* listFilesIterable(rootPath: string) {
         }
         const { result: stat } = tryStat
         if (stat.isDirectory) {
-            for await (const entry of Deno.readDir(path)) {
-                paths.push(`${path}/${entry.name}`)
+            try {
+                const addPaths = []
+                for await (const entry of Deno.readDir(path)) {
+                    addPaths.push(`${path}/${entry.name}`)
+                }
+                paths.push(...addPaths)
+            } catch (error) {
+                const pathError: ListFileResult = {
+                    isSuccess: false,
+                    path,
+                    error,
+                }
+                yield pathError
             }
         } else {
             const mtime = stat.mtime
