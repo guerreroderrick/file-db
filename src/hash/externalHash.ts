@@ -54,7 +54,7 @@ export async function externalHash({
     return hashes
 }
 
-async function* consumeLines(stdout: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+async function* consumeLines(stdout: ReadableStream<Uint8Array>) {
     const decoder = new TextDecoder()
     const reader = stdout.getReader()
     let remainder: string = ''
@@ -75,6 +75,7 @@ async function* consumeLines(stdout: ReadableStream<Uint8Array>): AsyncGenerator
             yield line
         }
     }
+    reader.releaseLock()
 }
 async function readLines(stdout: ReadableStream<Uint8Array>) {
     const results: [hash: string, file: string][] = []
@@ -144,7 +145,11 @@ export class ExternalHasher {
         this.proxy = null
         await writer.close()
         await child.status
-        await child.stdout.cancel()
-
+        let next = await reader.next()
+        while (!next.done) {
+            console.log({next})
+            next = await reader.next()
+        }
+        child.stdout.cancel()
     }
 }
