@@ -5,7 +5,7 @@ import { DIGEST_ALGORITHM_NAMES } from "jsr:@std/crypto/crypto";
 import { getSizeDescription } from "./getSizeDescription.ts";
 import { performRegularCleanup, registerProcessCleanup } from "./registerProcessCleanup.ts";
 import { FileEntry, isFileEntry, listFiles, listFilesIterable, listFilesSync } from "./listFiles.ts";
-import { externalHash, ExternalHasher } from "./hash/externalHash.ts";
+import { ExternalHasher } from "./hash/externalHash.ts";
 
 if (import.meta.main) {
     registerProcessCleanup(() => {})
@@ -66,7 +66,8 @@ async function main(args: string[]) {
     const goHashFiles: [hash: string, file: string][] = []
     if (includeExternalTest) {
         const goStartTime = Date.now()
-        const goResult = await externalHash({ fileList })
+        await using hasher = new ExternalHasher({})
+        const goResult = await hasher.hashFiles(fileList)
         console.log(`Go hash time: ${Date.now() - goStartTime}ms`)
         goHashFiles.push(...goResult)
     }
@@ -128,26 +129,6 @@ async function main(args: string[]) {
 
         startTime = Date.now()
         for (let i = 0; i < smallIterations; i++) {
-            const hash = await externalHash({
-                    fileList: [smallestFile[0]],
-                    forceStdin: true,
-                })
-            assertEquals(hash[0][0], smallestHash)
-        }
-        console.log(`Small file (${smallestSize})x${smallIterations} external hash time stdin: ${Date.now() - startTime}ms`)
-
-        startTime = Date.now()
-        for (let i = 0; i < smallIterations; i++) {
-            const hash = await externalHash({
-                    fileList: [smallestFile[0]],
-                    forceStdin: false,
-                })
-            assertEquals(hash[0][0], smallestHash)
-        }
-        console.log(`Small file (${smallestSize})x${smallIterations} external hash time arg: ${Date.now() - startTime}ms`)
-
-        startTime = Date.now()
-        for (let i = 0; i < smallIterations; i++) {
             const hash = getFileHashSync(smallestFile[0], 'SHA-256')
             assertEquals(hash, smallestHash)
         }
@@ -179,23 +160,10 @@ async function main(args: string[]) {
 
         startTime = Date.now()
         for (let i = 0; i < largeIterations; i++) {
-            const hash = await externalHash({
-                    fileList: [largestFile[0]],
-                    forceStdin: true
-                })
+            const hash = await hasher.hashFiles([largestFile[0]])
             assertEquals(hash[0][0], largestHash)
         }
         console.log(`Large file (${largestSize})x${largeIterations} external hash time stdin: ${Date.now() - startTime}ms`)
-
-        startTime = Date.now()
-        for (let i = 0; i < largeIterations; i++) {
-            const hash = await externalHash({
-                    fileList: [largestFile[0]],
-                    forceStdin: false,
-                })
-            assertEquals(hash[0][0], largestHash)
-        }
-        console.log(`Large file (${largestSize})x${largeIterations} external hash time arg: ${Date.now() - startTime}ms`)
 
         startTime = Date.now()
         for (let i = 0; i < largeIterations; i++) {
