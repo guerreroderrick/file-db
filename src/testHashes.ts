@@ -72,18 +72,12 @@ async function main(args: string[]) {
     }
 
     for (const algorithm of algorithms) {
-        const nextStartTime = Date.now()
-        await Promise.all(fileList.map(async (file) => {
-            await getFileHash(file, algorithm)
-        }))
-        const hashTime = Date.now()
-        console.log(`${algorithm} hash time: ${hashTime - nextStartTime}ms`)
-
+        const startTime = Date.now()
         const hashes = fileList.map((file) => {
             return getFileHashSync(file, algorithm)
         })
         const hashSyncTime = Date.now()
-        console.log(`${algorithm} hash sync time: ${hashSyncTime - hashTime}ms`)
+        console.log(`${algorithm} hash sync time: ${hashSyncTime - startTime}ms`)
 
         if (includeExternalTest && algorithm === 'SHA-256') {
             const goHashes = goHashFiles.map(([hash]) => hash)
@@ -116,10 +110,10 @@ async function main(args: string[]) {
                 return largest
             }, sentinelSmallest)
 
-        const smallestHash = await getFileHash(smallestFile[0], 'SHA-256')
+        const smallestHash = await getFileHash(smallestFile[0])
         const smallestSizeDesc = getSizeDescription(smallestFile[1])
         const smallestSize= `${smallestSizeDesc.size} ${smallestSizeDesc.suffix}B`
-        const largestHash = await getFileHash(largestFile[0], 'SHA-256')
+        const largestHash = await getFileHash(largestFile[0])
         const largestSizeDesc = getSizeDescription(largestFile[1])
         const largestSize = `${largestSizeDesc.size} ${largestSizeDesc.suffix}B`
 

@@ -133,8 +133,8 @@ export class ExternalHasher {
         for (let i = 0; i < fileList.length; i++) {
             const next = await reader.next()
             assert(!next.done)
-    
-            results[i] = next.value.split('\t') as [string, string]
+            const value = next.value
+            results[i] = value.split('\t') as [string, string]
         }
         return results
     }
