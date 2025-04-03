@@ -67,38 +67,6 @@ export async function* listFilesIterable(rootPath: string) {
     }
 }
 
-export async function listFiles(rootPath: string) {
-    const results: ListFileResult[] = []
-    const paths = [rootPath]
-    while (paths.length > 0) {
-        const nextPath = paths.shift()!
-        const path = getCanonicalPath(nextPath)
-        const tryStat = await tryCatch(() => Deno.stat(path))
-
-        if ('error' in tryStat) {
-            results.push({ isSuccess: false, path, error: tryStat.error })
-            continue
-        }
-        const { result: stat } = tryStat
-        if (stat.isDirectory) {
-            for await (const entry of Deno.readDir(path)) {
-                paths.push(`${path}/${entry.name}`)
-            }
-        } else {
-            const mtime = stat.mtime
-            assert(mtime !== null, `System doesn't provide modify time for ${path}`)
-
-            results.push({
-                isSuccess: true,
-                path,
-                size: stat.size,
-                lastModified: mtime.getTime()
-            })
-        }
-    }
-    return results
-}
-
 async function tryCatch<Result>(fn: () => Promise<Result>): Promise<
     { result: Result }
     | { error: unknown }

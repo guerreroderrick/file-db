@@ -2,7 +2,7 @@ import { assert } from "@std/assert/assert";
 import { assertEquals } from "@std/assert/equals";
 import { getSizeDescription } from "./util/getSizeDescription.ts";
 import { performRegularCleanup, registerProcessCleanup } from "./registerProcessCleanup.ts";
-import { FileEntry, isFileEntry, listFiles, listFilesIterable } from "./listFiles.ts";
+import { FileEntry, isFileEntry, listFilesIterable } from "./listFiles.ts";
 import { ExternalHasher } from "./hash/externalHash.ts";
 
 if (import.meta.main) {
@@ -26,23 +26,15 @@ async function main(args: string[]) {
 
     const startTime = Date.now()
     
-    const listedFiles = (await listFiles(rootPath))
-        .filter(isFileEntry)
-    const listFilesAsyncTime = Date.now()
-    console.log(`List files async time: ${listFilesAsyncTime - startTime}ms`)
-
-    const fileList = listedFiles.map(({ path }) => path)
-
-    const generatedFileList: FileEntry[] = []
+    const listedFiles: FileEntry[] = []
     for await (const entry of listFilesIterable(rootPath)) {
         if (isFileEntry(entry)) {
-            generatedFileList.push(entry)
+            listedFiles.push(entry)
         }
     }
-    const generatedFilePaths = generatedFileList.map(({ path }) => path)
+    const fileList = listedFiles.map(({ path }) => path)
     const listFilesIterableTime = Date.now()
-    console.log(`List files iterable time: ${listFilesIterableTime - listFilesAsyncTime}ms`)
-    assertEquals(fileList, generatedFilePaths)
+    console.log(`List files iterable time: ${listFilesIterableTime - startTime}ms`)
 
     const goHashFiles: [hash: string, file: string][] = []
     if (includeExternalTest) {
