@@ -1,5 +1,6 @@
 import { assert } from 'jsr:@std/assert/assert'
 import { getCanonicalPath } from "./path/getCanonicalPath.ts";
+import { tryCatch } from "./util/tryCatch.ts";
 
 export type FileEntry = {
     path: string,
@@ -64,16 +65,5 @@ export async function* listFilesIterable(rootPath: string) {
             }
             yield fileEntry
         }
-    }
-}
-
-async function tryCatch<Result>(fn: () => Promise<Result>): Promise<
-    { result: Result }
-    | { error: unknown }
-> {
-    try {
-        return { result: await fn() }
-    } catch (error) {
-        return { error }
     }
 }
