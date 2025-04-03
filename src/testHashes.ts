@@ -2,7 +2,7 @@ import { assert } from "@std/assert/assert";
 import { assertEquals } from "@std/assert/equals";
 import { getSizeDescription } from "./util/getSizeDescription.ts";
 import { performRegularCleanup, registerProcessCleanup } from "./registerProcessCleanup.ts";
-import { FileEntry, isFileEntry, listFilesIterable } from "./listFiles.ts";
+import { FileEntry, isFileEntry, listFilesIterable } from "./path/listFiles.ts";
 import { ExternalHasher } from "./hash/externalHash.ts";
 
 if (import.meta.main) {

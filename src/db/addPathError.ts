@@ -1,5 +1,5 @@
 import { DB } from '../../deps.ts'
-import { PathError } from '../listFiles.ts'
+import { PathError } from '../path/listFiles.ts'
 
 export type addPathErrorParams = {
     db: DB

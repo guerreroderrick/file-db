@@ -3,7 +3,7 @@ import { addPathError } from "../db/addPathError.ts";
 import { getDefaultDatabase } from "../db/getDefaultDatabase.ts";
 import { updateFileHash } from "../db/updateFileHash.ts";
 import { ExternalHasher } from "../hash/externalHash.ts";
-import { isFileEntry, isPathError, listFilesIterable } from "../listFiles.ts";
+import { isFileEntry, isPathError, listFilesIterable } from "../path/listFiles.ts";
 import { assertEquals } from "@std/assert/equals";
 
 type SuccessHash = {

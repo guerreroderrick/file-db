@@ -3,7 +3,7 @@ import { updateFileHash } from './updateFileHash.ts'
 import { getFilesNeedingHash } from './getFilesNeedingHash.ts'
 import { addFileListing } from "./addFileListing.ts";
 import { dbTestData } from "./__test_dbTestData.ts";
-import { FileEntry } from "../listFiles.ts";
+import { FileEntry } from "../path/listFiles.ts";
 
 const { 
     testDb,

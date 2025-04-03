@@ -1,6 +1,6 @@
 import { assert } from 'jsr:@std/assert/assert'
-import { getCanonicalPath } from "./path/getCanonicalPath.ts";
-import { tryCatch } from "./util/tryCatch.ts";
+import { getCanonicalPath } from "./getCanonicalPath.ts";
+import { tryCatch } from "../util/tryCatch.ts";
 
 export type FileEntry = {
     path: string,
