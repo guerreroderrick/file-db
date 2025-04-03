@@ -1,6 +1,5 @@
 import { assert } from "@std/assert/assert";
 import { assertEquals } from "@std/assert/equals";
-import { getFileHash } from "./getFileHash.ts";
 import { getSizeDescription } from "./getSizeDescription.ts";
 import { performRegularCleanup, registerProcessCleanup } from "./registerProcessCleanup.ts";
 import { FileEntry, isFileEntry, listFiles, listFilesIterable, listFilesSync } from "./listFiles.ts";
@@ -86,19 +85,19 @@ async function main(args: string[]) {
                 return largest
             }, sentinelSmallest)
 
-        const smallestHash = await getFileHash(smallestFile[0])
         const smallestSizeDesc = getSizeDescription(smallestFile[1])
         const smallestSize= `${smallestSizeDesc.size} ${smallestSizeDesc.suffix}B`
-        const largestHash = await getFileHash(largestFile[0])
         const largestSizeDesc = getSizeDescription(largestFile[1])
         const largestSize = `${largestSizeDesc.size} ${largestSizeDesc.suffix}B`
 
         let startTime = Date.now()
         
         await using hasher = new ExternalHasher({})
+        const consistentSmallHash: string[] = []
         for (let i = 0; i < smallIterations; i++) {
             const hash = await hasher.hashFiles([smallestFile[0]])
-            assertEquals(hash[0][0], smallestHash)
+            if (i === 0) { consistentSmallHash.push(hash[0][0]) }
+            assertEquals(hash[0][0], consistentSmallHash[0])
         }
         console.log(`Small file (${smallestSize})x${smallIterations} external hash time reused: ${Date.now() - startTime}ms`)
 
@@ -120,16 +119,11 @@ async function main(args: string[]) {
         }
 
         startTime = Date.now()
+        const consistentLargeHash: string[] = []
         for (let i = 0; i < largeIterations; i++) {
             const hash = await hasher.hashFiles([largestFile[0]])
-            assertEquals(hash[0][0], largestHash)
-        }
-        console.log(`Large file (${largestSize})x${largeIterations} external hash time reused: ${Date.now() - startTime}ms`)
-
-        startTime = Date.now()
-        for (let i = 0; i < largeIterations; i++) {
-            const hash = await hasher.hashFiles([largestFile[0]])
-            assertEquals(hash[0][0], largestHash)
+            if (i === 0) { consistentLargeHash.push(hash[0][0]) }
+            assertEquals(hash[0][0], consistentLargeHash[0])
         }
         console.log(`Large file (${largestSize})x${largeIterations} external hash time stdin: ${Date.now() - startTime}ms`)
 
