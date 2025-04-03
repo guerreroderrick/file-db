@@ -28,7 +28,7 @@ export async function* listFilesIterable(rootPath: string) {
         const path = getCanonicalPath(nextPath)
         const tryStat = await tryCatch(() => Deno.stat(path))
 
-        if ('error' in tryStat) {
+        if (tryStat.error) {
             const pathError: ListFileResult = {
                 isSuccess: false,
                 path,
@@ -37,7 +37,7 @@ export async function* listFilesIterable(rootPath: string) {
             yield pathError
             continue
         }
-        const { result: stat } = tryStat
+        const { value: stat } = tryStat
         if (stat.isDirectory) {
             try {
                 const addPaths = []

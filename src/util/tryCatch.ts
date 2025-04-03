@@ -1,11 +1,18 @@
 
-export async function tryCatch<Result>(fn: () => Promise<Result>): Promise<
-    { result: Result }
-    | { error: unknown }
-> {
+type Value<T> = { value: T, error: false }
+type ErrorResult = { error: Error }
+type Result<T> = Value<T> | ErrorResult
+
+export async function tryCatch<T>(fn: () => Promise<T>): Promise<Result<T>>
+{
     try {
-        return { result: await fn() }
+        return { value: await fn(), error: false }
     } catch (error) {
-        return { error }
+        if (error instanceof Error) { return { error } }
+        return {
+            error: new Error(`Unknown error: ${error}`
+                , { cause: error }
+            )
+        }
     }
 }
