@@ -1,7 +1,6 @@
 import { assert } from "@std/assert/assert";
 import { assertEquals } from "@std/assert/equals";
-import { getFileHash, getFileHashSync } from "./getFileHash.ts";
-import { DIGEST_ALGORITHM_NAMES } from "jsr:@std/crypto/crypto";
+import { getFileHash } from "./getFileHash.ts";
 import { getSizeDescription } from "./getSizeDescription.ts";
 import { performRegularCleanup, registerProcessCleanup } from "./registerProcessCleanup.ts";
 import { FileEntry, isFileEntry, listFiles, listFilesIterable, listFilesSync } from "./listFiles.ts";
@@ -17,10 +16,9 @@ if (import.meta.main) {
 }
 
 async function main(args: string[]) {
-    assert(args.length >= 2 && args.length <= 3, `Usage: file-db <digest-algorithms|--skip-digests> <file-path> [--include-external-test], received '${args}'`)
+    assert(args.length >= 1 && args.length <= 2, `Usage: file-db <file-path> [--include-external-test], received '${args}'`)
 
     const [
-        digestAlgorithms,
         rootPath,
         argIncludeExternalTest,
     ] = args
@@ -28,14 +26,6 @@ async function main(args: string[]) {
     const includeExternalTest = argIncludeExternalTest === '--include-external-test'
 
     const startTime = Date.now()
-    const algorithms = digestAlgorithms === '--skip-digests'
-        ? [] 
-        : digestAlgorithms.split(',')
-        .map((algorithm)=> {
-            const match = DIGEST_ALGORITHM_NAMES.find(name => name === algorithm.trim().toUpperCase())
-            assert(match !== undefined, `Invalid digest algorithm: ${algorithm}`)
-            return match
-        })
     
     const listedFiles = (await listFiles(rootPath))
         .filter(isFileEntry)
@@ -70,21 +60,6 @@ async function main(args: string[]) {
         const goResult = await hasher.hashFiles(fileList)
         console.log(`Go hash time: ${Date.now() - goStartTime}ms`)
         goHashFiles.push(...goResult)
-    }
-
-    for (const algorithm of algorithms) {
-        const startTime = Date.now()
-        const hashes = fileList.map((file) => {
-            return getFileHashSync(file, algorithm)
-        })
-        const hashSyncTime = Date.now()
-        console.log(`${algorithm} hash sync time: ${hashSyncTime - startTime}ms`)
-
-        if (includeExternalTest && algorithm === 'SHA-256') {
-            const goHashes = goHashFiles.map(([hash]) => hash)
-            assertEquals(hashes, goHashes, `Hashes do not match for algorithm: ${algorithm}`)
-            console.log(`Go and SHA-256 hashes match for ${hashes.length} files`)
-        }
     }
 
     if (includeExternalTest) {
@@ -127,13 +102,6 @@ async function main(args: string[]) {
         }
         console.log(`Small file (${smallestSize})x${smallIterations} external hash time reused: ${Date.now() - startTime}ms`)
 
-        startTime = Date.now()
-        for (let i = 0; i < smallIterations; i++) {
-            const hash = getFileHashSync(smallestFile[0], 'SHA-256')
-            assertEquals(hash, smallestHash)
-        }
-        console.log(`Small file (${smallestSize})x${smallIterations} internal hash time: ${Date.now() - startTime}ms`)
-
         const hashers = new Array<number>(largeIterations)
             .fill(0)
             .map(() => new ExternalHasher({}))
@@ -165,11 +133,5 @@ async function main(args: string[]) {
         }
         console.log(`Large file (${largestSize})x${largeIterations} external hash time stdin: ${Date.now() - startTime}ms`)
 
-        startTime = Date.now()
-        for (let i = 0; i < largeIterations; i++) {
-            const hash = getFileHashSync(largestFile[0], 'SHA-256')
-            assertEquals(hash, largestHash)
-        }
-        console.log(`Large file (${largestSize})x${largeIterations} internal hash time: ${Date.now() - startTime}ms`)
     }
 }
