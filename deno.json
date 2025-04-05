@@ -1,5 +1,6 @@
 {
   "tasks": {
+    "build": "deno run --allow-run build.ts",
     "file-db": "deno run --allow-read --allow-write --allow-run --allow-sys src/file-db.ts",
     "test": "deno test --watch --allow-read --allow-write --allow-run",
     "test-once": "deno test --allow-read --allow-write --allow-run",
