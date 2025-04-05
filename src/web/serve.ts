@@ -11,7 +11,10 @@ async function main(_args: string[]) {
     }, async (req, info) => {
         console.log({ req, info })
 
-        const response = await handleStatic(req, info)
+        let response = await handleStatic(req, info)
+        if (response) { return response }
+
+        response = handleIndexRedirect(req, info)
         if (response) { return response }
 
         return handleNotFound(req, info)
@@ -19,25 +22,26 @@ async function main(_args: string[]) {
     await server.finished
 }
 
-async function handleStatic(req: Request, info: Deno.ServeHandlerInfo<Deno.NetAddr>) {
+async function handleStatic(req: Request, _info: Deno.ServeHandlerInfo<Deno.NetAddr>) {
     if (req.method !== 'GET') { return null }
 
     const url = new URL(req.url)
     const pathname = url.pathname
     let filepath = pathname
     if (pathname === '/favicon.ico') {
-        filepath = '/static/image/favicon.ico'
+        filepath = '/image/favicon.ico'
     }
     return await handleStaticPath(filepath)
 }
 
 async function handleStaticPath(filepath: string) {
-    if (!filepath.startsWith('/static/')) { return null }
+    const allowedExtensions = /\.(html|ico|js)$/
+    if (!allowedExtensions.test(filepath)) { return null }
 
     if (filepath.match(/\.\./)) {
         return new Response('Forbidden', { status: 403 })
     }
-    const localPath = `.${filepath}`
+    const localPath = `./static/${filepath}`
     const ext = localPath.split('.').pop()!
     const tryStat = await tryCatch(() => Deno.stat(localPath))
     if (tryStat.error) {
@@ -65,5 +69,17 @@ function handleNotFound(_req: Request, _info: Deno.ServeHandlerInfo<Deno.NetAddr
     return new Response("Not found", {
         status: 404,
         headers: { "content-type": "text/plain" },
+    })
+}
+
+function handleIndexRedirect(req: Request, _info: Deno.ServeHandlerInfo<Deno.NetAddr>): Response | null {
+
+    if (!req.url.endsWith('/')) { return null }
+
+    return new Response(null, {
+        status: 302,
+        headers: {
+            location: req.url + 'index.html',
+        },
     })
 }
