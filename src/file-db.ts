@@ -1,5 +1,4 @@
 import { performRegularCleanup } from "./registerProcessCleanup.ts";
-import { assertNever } from "./util/assertNever.ts";
 import { syncFileDb } from "./commands/syncFileDb.ts";
 import { getDefaultDatabase } from "./db/getDefaultDatabase.ts";
 import { getCanonicalPath } from "./path/getCanonicalPath.ts";
@@ -20,6 +19,15 @@ async function main(args: string[]) {
 
 async function runParameterSet(params: RunMainParams) {
     switch (params.paramSet) {
+        case 'error': {
+            const { error } = params
+            console.error({ error })
+        }   // fallthrough
+        case 'help': {
+            const { helpText } = params
+            console.log(helpText)
+            return
+        }
         case 'sync': {
             const { filePath } = params
             const { numFiles, numPathErrors } = await syncFileDb(filePath)
@@ -34,7 +42,7 @@ async function runParameterSet(params: RunMainParams) {
             await normalizePaths();
             return
         }
-        default: assertNever(params)
+        default: { const _: never = params }
     }
 }
 
