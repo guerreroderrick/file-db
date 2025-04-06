@@ -1,6 +1,6 @@
 import { assertEquals } from 'jsr:@std/assert/equals'
 import { assertThrows } from 'jsr:@std/assert/throws'
-import { getCanonicalPath } from "./getCanonicalPath.ts";
+import { getCanonicalPath, getCanonicalPathType, PathType } from "./getCanonicalPath.ts";
 
 Deno.test(function testDrivePathsUseBackslash() {
     const cases: [test: string, expected: string][] = [
@@ -72,5 +72,17 @@ Deno.test(function testRelativePathsThrow() {
     ]
     for (const test of cases) {
         assertThrows(() => getCanonicalPath(test))
+    }
+})
+
+Deno.test(function testGetCanonicalPathType() {
+    const cases: [test: string, expectedType: PathType][] = [
+        ['C:\\foo\\bar', 'windows'],
+        ['\\\\server\\share\\foo\\bar', 'unc'],
+        ['/test/path', 'unix'],
+    ]
+    for (const [test, expectedType] of cases) {
+        const { type } = getCanonicalPathType(test)
+        assertEquals(type, expectedType)
     }
 })
