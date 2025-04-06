@@ -18,7 +18,7 @@ Deno.test(function testHelpArgs() {
 Deno.test(function testHelpArgsWithCommand() {
     const cases: [string, string][] = [
         [ 'help', 'sync'],
-        [ '--help', 'normalize'],
+        [ '--help', 'sync'],
     ]
     for (const [arg, command] of cases) {
         const args = parseArgs([arg, command])
@@ -30,17 +30,6 @@ Deno.test(function testHelpArgsWithCommand() {
 Deno.test(function testHelpArgsWithUnknownCommand() {
     const args = parseArgs(['help', 'unknown'])
     assert(args.paramSet === 'error')
-})
-
-Deno.test(function testNormalizeArgs() {
-    const args = parseArgs(['normalize'])
-    assertEquals(args.paramSet, 'normalize')
-})
-
-Deno.test(function testNormalizeArgsWithExtraArgs() {
-    const args = parseArgs(['normalize', 'extra'])
-    assert(args.paramSet === 'error')
-    assertStringIncludes(args.error, 'Too many arguments for normalize command')
 })
 
 Deno.test(function testSyncArgs() {

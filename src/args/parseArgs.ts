@@ -7,18 +7,12 @@ export type RunMainParams = {
     paramSet: 'help'
     helpText: string
 } | {
-    paramSet: 'normalize'
-} | {
     paramSet: 'sync'
     filePath: string
 }
 
 function getHelpTextForCommand(command: string): string | undefined {
     switch (command.toLowerCase()) {
-        case 'normalize': return `
-Usage: file-db normalize
-Normalize paths in the database. This will update all paths to their canonical form.
-`
         case 'sync': return `
 Usage: file-db sync <path>
 Sync the database with the file system. This will update the database to match the current state of the file system.
@@ -65,19 +59,6 @@ Commands:
             paramSet: 'help',
             helpText: commandHelpText,
         }
-    }
-
-    const normalizeArgIndex = args.findIndex(arg => arg.toLowerCase() === 'normalize')
-    if (normalizeArgIndex !== -1) {
-        const normalizeArgs = args.toSpliced(normalizeArgIndex, 1)
-        if (normalizeArgs.length > 0) {
-            return {
-                paramSet: 'error',
-                error: `Too many arguments for normalize command: ${normalizeArgs.join(' ')}`,
-                helpText,
-            }
-        }
-        return { paramSet: 'normalize' }
     }
 
     const syncArgIndex = args.findIndex(arg => arg.toLowerCase() === 'sync')

@@ -1,9 +1,9 @@
+import { assert } from 'jsr:@std/assert/assert'
 import * as path from 'jsr:@std/path'
 
 export function getCanonicalPath(filePath: string) {
-    if (!path.isAbsolute(filePath)) {
-        throw new Error(`Path must be absolute, resolve to absolute path first: ${filePath}`)
-    }
+    assert(path.isAbsolute(filePath), `Path must be absolute, resolve to absolute path first: ${filePath}`)
+
     const normalized = path.normalize(filePath)
     if (normalized.match(/^[a-z]:[\\/]/i)) {
         const drive = normalized.charAt(0).toUpperCase()
