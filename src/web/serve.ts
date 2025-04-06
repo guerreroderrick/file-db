@@ -9,7 +9,9 @@ async function main(_args: string[]) {
     const server = Deno.serve({
 
     }, async (req, info) => {
-        console.log({ req, info })
+        console.log({
+            req: `${req.method} ${req.url}`,
+        })
 
         let response = await handleStatic(req, info)
         if (response) { return response }
@@ -54,7 +56,6 @@ async function handleStaticPath(filepath: string) {
     const stream = file.readable
     const contentMimeType = contentType(ext)
     const mimeType = contentMimeType ?? 'application/octet-stream'
-    console.log({ localPath, mimeType })
     const response = new Response(stream, {
         status: 200,
         headers: {
