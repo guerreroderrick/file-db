@@ -7,12 +7,20 @@ export type RunMainParams = {
     paramSet: 'help'
     helpText: string
 } | {
+    paramSet: 'ignore action'
+    action: 'add'
+    filePath: string
+} | {
     paramSet: 'sync'
     filePath: string
 }
 
 function getHelpTextForCommand(command: string): string | undefined {
     switch (command.toLowerCase()) {
+        case 'ignore': return `
+Usage: file-db ignore add <path>
+Add a path to the ignore list. This will mark the path as ignored but not remove any existing entries.
+`
         case 'sync': return `
 Usage: file-db sync <path>
 Sync the database with the file system. This will update the database to match the current state of the file system.
@@ -58,6 +66,26 @@ Commands:
         return {
             paramSet: 'help',
             helpText: commandHelpText,
+        }
+    }
+
+    const command = args[0]?.toLowerCase()
+    const commandArgs = args.slice(1)
+    switch (command) {
+        case 'ignore': {
+            const [action, filePath] = commandArgs
+            if (action !== 'add' || filePath === undefined || commandArgs.length > 2) {
+                return {
+                    paramSet: 'error',
+                    error: `Invalid arguments for ignore: ${commandArgs.join(' ')}`,
+                    helpText: getHelpTextForCommand('ignore')!,
+                }
+            }
+            return {
+                paramSet: 'ignore action',
+                action,
+                filePath,
+            }
         }
     }
 
