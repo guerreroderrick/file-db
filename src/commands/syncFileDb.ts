@@ -3,6 +3,7 @@ import { addPathError } from "../db/addPathError.ts";
 import { getDefaultDatabase } from "../db/getDefaultDatabase.ts";
 import { updateFileHash } from "../db/updateFileHash.ts";
 import { ExternalHasher } from "../hash/externalHash.ts";
+import { getCurrentPathCase } from "../path/getCurrentPathCase.ts";
 import { isFileEntry, isPathError, listFilesIterable } from "../path/listFiles.ts";
 import { assertEquals } from "@std/assert/equals";
 
@@ -76,7 +77,11 @@ export async function syncFileDb(filePath: string) {
     await using hasher = new PooledHashUpdate(4)
     let lastOutput = Date.now()
     const encoder = new TextEncoder()
-    for await (const entry of listFilesIterable(filePath)) {
+    const currentCaseFilePath = await getCurrentPathCase(filePath)
+    if (currentCaseFilePath !== filePath) {
+        console.log({ debug: `Path case changed '${currentCaseFilePath}'` })
+    }
+    for await (const entry of listFilesIterable(currentCaseFilePath)) {
         if (Date.now() - lastOutput > 1000) {
             await Deno.stdout.write(encoder.encode(`\rNumPathErrors: ${numPathErrors}, NumFiles: ${numFiles}...`))
             lastOutput = Date.now()

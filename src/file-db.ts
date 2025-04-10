@@ -1,8 +1,7 @@
 import { performRegularCleanup } from "./registerProcessCleanup.ts";
 import { syncFileDb } from "./commands/syncFileDb.ts";
 import { parseArgs, RunMainParams } from "./args/parseArgs.ts";
-import { assert } from "@std/assert/assert";
-import { isAbsolute } from "jsr:@std/path/is-absolute";
+import { performIgnoreAction } from "./commands/performIgnoreAction.ts";
 
 if (import.meta.main) {
     await main(Deno.args)
@@ -45,14 +44,4 @@ async function runParameterSet(params: RunMainParams) {
         }
         default: { const _: never = params }
     }
-}
-
-function performIgnoreAction(action: string, filePath: string) {
-    assert(action === 'add', `Unknown action: ${action}`)
-
-    if (!isAbsolute(filePath)) {
-        console.error('File path must be relative')
-        return
-    }
-    assert(false, `Not implemented: performIgnoreAction(${action}, ${filePath})`)
 }

@@ -7,9 +7,9 @@ export type DBVersion = {
 }
 
 const currentVersion: DBVersion = {
-    id: 3n,
-    description: 'Add files_Log.hashTime column',
-    updatedAt: new Date('2025-03-20'),
+    id: 5n,
+    description: 'Add files_Log.ignoredFileId column',
+    updatedAt: new Date('2025-04-06'),
 }
 
 export function initSchema(db: DB) {
@@ -54,6 +54,7 @@ create table if not exists [files_Log] (
     , hashTime datetime null
     , modifyTime datetime not null
     , hash bytea null
+    , ignoredFileId integer null
     , primary key (hostname, path, version)
     )
         `)
@@ -69,6 +70,18 @@ create table if not exists [pathErrors_Log] (
     , primary key (hostname, path, scanTime)
     )
         `)
+}
+
+function initTable_ignoredFiles_Log(db: DB) {
+    db.execute(`
+create table if not exists [ignoredFiles_Log] (
+    id integer primary key autoincrement
+    , hostname text not null
+    , path text not null
+    , addedAt datetime not null
+    , unique (hostname, path)
+    )
+`)
 }
 
 function initEmptyDatabase(db: DB) {
@@ -106,6 +119,21 @@ insert into [files_Log] (hostname, path, version, isArchived, size, hashTime, mo
             `)
             db.query(`
 drop table [files_Log_migrate]
+            `)
+            /* falls through */
+        case '3':
+            initTable_ignoredFiles_Log(db)
+            /* falls through */
+        case '4':
+            db.query(`
+alter table [files_Log] rename to [files_Log_migrate]
+            `)
+            initTable_files_Log(db)
+            db.query(`
+insert into [files_Log] (hostname, path, version, isArchived, size, hashTime, modifyTime, hash)
+    select hostname, path, version, isArchived, size, hashTime, modifyTime, hash
+        from [files_Log_migrate]
+; drop table [files_Log_migrate]
             `)
 
             db.query(`
