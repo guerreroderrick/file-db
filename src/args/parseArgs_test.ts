@@ -17,7 +17,7 @@ Deno.test(function testHelpArgs() {
 
 Deno.test(function testHelpArgsWithCommand() {
     const cases: [string, string][] = [
-        [ 'help', 'sync'],
+        [ 'help', 'show-tree'],
         [ '--help', 'sync'],
     ]
     for (const [arg, command] of cases) {
@@ -30,6 +30,14 @@ Deno.test(function testHelpArgsWithCommand() {
 Deno.test(function testHelpArgsWithUnknownCommand() {
     const args = parseArgs(['help', 'unknown'])
     assert(args.paramSet === 'error')
+})
+
+Deno.test(function testShowTreeAny() {
+    const args = parseArgs(['show-tree'])
+    assert(args.paramSet === 'show-tree')
+    assertEquals(args.depth, 5)
+    assertEquals(args.hostname, { isAnyHost: true })
+    assertEquals(args.path, { isAnyPath: true })
 })
 
 Deno.test(function testSyncArgs() {

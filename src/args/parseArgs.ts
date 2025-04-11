@@ -11,6 +11,21 @@ export type RunMainParams = {
     action: 'add'
     filePath: string
 } | {
+    paramSet: 'show-tree'
+    depth: number
+    hostname: {
+        isAnyHost: true
+    } | {
+        isAnyHost: false
+        host: string
+    }
+    path: {
+        isAnyPath: true
+    } | {
+        isAnyPath: false
+        prefix: string
+    }
+} | {
     paramSet: 'sync'
     filePath: string
 }
@@ -20,6 +35,13 @@ function getHelpTextForCommand(command: string): string | undefined {
         case 'ignore': return `
 Usage: file-db ignore add <path>
 Add a path to the ignore list. This will mark the path as ignored but not remove any existing entries.
+`
+        case 'show-tree': return `
+Usage: file-db show-tree [--depth=5] [--hostname=<host>] [--path=<path-prefix>]
+Show a tree-map of the scanned files.
+    --depth=<depth>      The depth of the tree to show. Default is 5.
+    --hostname=<host>    Show only files on the given host. If not specified, show all hosts.
+    --path=<path-prefix> Show only files with the given path prefix.
 `
         case 'sync': return `
 Usage: file-db sync <path>
@@ -38,6 +60,7 @@ Commands:
   help, --help, -h  Show this help message and exit
   help <command>    Show help for a specific command
   normalize         Normalize paths in the database
+  show-tree         Show a tree-map of the scanned files
   sync <path>       Sync the database with the file system
 `
 
@@ -85,6 +108,14 @@ Commands:
                 paramSet: 'ignore action',
                 action,
                 filePath,
+            }
+        }
+        case 'show-tree': {
+            return {
+                paramSet: 'show-tree',
+                depth: 5,
+                hostname: { isAnyHost: true },
+                path: { isAnyPath: true },
             }
         }
     }

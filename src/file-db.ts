@@ -32,6 +32,15 @@ async function runParameterSet(params: RunMainParams) {
             await performIgnoreAction(action, filePath)
             return
         }
+        case 'show-tree': {
+            const { hostname, path } = params
+            console.log({
+                debug: 'show-tree',
+                hostname,
+                path,
+            })
+            throw new Error('Not implemented')
+        }
         case 'sync': {
             const { filePath } = params
             const { numFiles, numPathErrors } = await syncFileDb(filePath)
