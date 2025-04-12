@@ -4,7 +4,7 @@
   - [-] Parse show-tree args
     - [x] Scaffold show-tree args
     - [x] Add missing ignore test
-    - [ ] Refactor parse args
+    - [x] Refactor parse args
   - [ ] Query ignore data
   - [ ] Save html with d3
   - [ ] Open browser to html
