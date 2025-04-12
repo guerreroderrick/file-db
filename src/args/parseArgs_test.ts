@@ -17,6 +17,7 @@ Deno.test(function testHelpArgs() {
 
 Deno.test(function testHelpArgsWithCommand() {
     const cases: [string, string][] = [
+        [ '-h', 'ignore'],
         [ 'help', 'show-tree'],
         [ '--help', 'sync'],
     ]

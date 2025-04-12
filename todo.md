@@ -3,7 +3,7 @@
 - [-] Decide paths to ignore
   - [-] Parse show-tree args
     - [x] Scaffold show-tree args
-    - [ ] Add missing ignore test
+    - [x] Add missing ignore test
     - [ ] Refactor parse args
   - [ ] Query ignore data
   - [ ] Save html with d3
