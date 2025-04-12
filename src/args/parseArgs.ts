@@ -106,6 +106,7 @@ function getCommandHelp_ShowTree() { return `
 Usage: file-db show-tree [--depth=5] [--hostname=<host>] [--path=<path-prefix>]
 Show a tree-map of the scanned files.
     --depth=<depth>      The depth of the tree to show. Default is 5.
+                         0 will show all files.
     --hostname=<host>    Show only files on the given host. If not specified, show all hosts.
     --path=<path-prefix> Show only files with the given path prefix.
 ` }
@@ -160,7 +161,7 @@ function parseCommand_ShowTree(args: readonly string[]) {
 
             const depthArg = arg.slice('--depth='.length)
             depth = parseInt(depthArg, 10)
-            if (isNaN(depth) || depth <= 0) {
+            if (isNaN(depth) || depth < 0) {
                 return error(`Invalid depth argument: ${depthArg}`)
             }
         } else if (arg.startsWith('--hostname=')) {

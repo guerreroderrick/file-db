@@ -43,7 +43,7 @@ Deno.test(function testShowTreeAny() {
 
 Deno.test(function testShowTreeErrors() {
     const cases: string[][] = [
-        ['--depth=A'], ['--depth=0'],
+        ['--depth=A'], ['--depth=-1'],
         ['--hostname='],
         ['--path='],
         ['--depth=3', '--depth=2'],
