@@ -1,4 +1,5 @@
 import { open } from "../../deps.ts";
+import { getDescendants } from "../db/getDescendants.ts";
 
 type ShowTreeParams = {
     depth: number
@@ -27,7 +28,18 @@ type TreeMapNode = {
     size?: number
     children?: TreeMapNode[]
 }
-async function queryData(_args: ShowTreeParams) {
+async function queryData({
+    depth,
+    hostname,
+    path,
+}: ShowTreeParams) {
+    const descendants = getDescendants({
+        depth,
+        hostname,
+        path,
+    })
+    console.log({ descendants })
+    
     await Promise.resolve()
     const root: TreeMapNode = {
         name: 'root',

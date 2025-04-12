@@ -2,10 +2,10 @@
 
 - [-] Decide paths to ignore
   - [x] Parse show-tree args
-  - [-] Save html with d3
-    - [x] prototype dummy data
-    - [ ] include child count
-  - [ ] Query ignore data
+  - [x] Save html with d3
+  - [-] Query ignore data
+    - [ ] Translate paths to tree node
+    - [ ] pull paths from db
   - [ ] Open browser to html
 - [ ] refactor db migrations
 
