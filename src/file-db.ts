@@ -2,6 +2,7 @@ import { performRegularCleanup } from "./registerProcessCleanup.ts";
 import { syncFileDb } from "./commands/syncFileDb.ts";
 import { parseArgs, RunMainParams } from "./args/parseArgs.ts";
 import { performIgnoreAction } from "./commands/performIgnoreAction.ts";
+import { showTree } from "./commands/showTree.ts";
 
 if (import.meta.main) {
     await main(Deno.args)
@@ -33,13 +34,8 @@ async function runParameterSet(params: RunMainParams) {
             return
         }
         case 'show-tree': {
-            const { hostname, path } = params
-            console.log({
-                debug: 'show-tree',
-                hostname,
-                path,
-            })
-            throw new Error('Not implemented')
+            const { depth, hostname, path, keepAlive } = params
+            return await showTree({ depth, hostname, path, keepAlive })
         }
         case 'sync': {
             const { filePath } = params

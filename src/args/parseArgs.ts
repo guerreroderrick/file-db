@@ -109,6 +109,7 @@ Show a tree-map of the scanned files.
                          0 will show all files.
     --hostname=<host>    Show only files on the given host. If not specified, show all hosts.
     --path=<path-prefix> Show only files with the given path prefix.
+    --keep-alive         Keep the server alive after showing the tree.
 ` }
 
 type ShowTree_HostParameter = {
@@ -128,6 +129,7 @@ type ShowTreeParameters = {
     depth: number
     hostname: ShowTree_HostParameter
     path: ShowTree_PathParameter
+    keepAlive: boolean
 }
 function parseCommand_ShowTree(args: readonly string[]) {
     if (args.length > 3) {
@@ -141,6 +143,7 @@ function parseCommand_ShowTree(args: readonly string[]) {
     let depth = 5
     let hostname: ShowTree_HostParameter = { isAnyHost: true }
     let path: ShowTree_PathParameter = { isAnyPath: true }
+    let keepAlive = false
     let isDepthSet = false
     let isHostnameSet = false
     let isPathSet = false
@@ -186,6 +189,8 @@ function parseCommand_ShowTree(args: readonly string[]) {
                 return error(`Invalid path argument: ${arg}`)
             }
             path = { isAnyPath: false, prefix: pathPrefix }
+        } else if (arg === '--keep-alive') {
+            keepAlive = true
         } else {
             return error(`Invalid argument for show-tree command: ${arg}`)
         }
@@ -195,6 +200,7 @@ function parseCommand_ShowTree(args: readonly string[]) {
         depth,
         hostname,
         path,
+        keepAlive,
     }
     return params
 }

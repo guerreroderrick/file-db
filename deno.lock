@@ -1,9 +1,11 @@
 {
   "version": "4",
   "specifiers": {
+    "jsr:@opensrc/deno-open@*": "1.0.0",
     "jsr:@std/assert@*": "1.0.11",
     "jsr:@std/assert@1": "1.0.11",
     "jsr:@std/assert@^1.0.10": "1.0.11",
+    "jsr:@std/assert@~0.218.2": "0.218.2",
     "jsr:@std/cli@^1.0.12": "1.0.15",
     "jsr:@std/crypto@*": "1.0.4",
     "jsr:@std/encoding@*": "1.0.7",
@@ -17,12 +19,22 @@
     "jsr:@std/net@^1.0.4": "1.0.4",
     "jsr:@std/path@*": "1.0.8",
     "jsr:@std/path@^1.0.8": "1.0.8",
+    "jsr:@std/path@~0.218.2": "0.218.2",
     "jsr:@std/streams@^1.0.9": "1.0.9",
     "jsr:@std/testing@*": "1.0.9",
     "npm:@types/node@*": "22.12.0",
     "npm:googleapis@*": "146.0.0"
   },
   "jsr": {
+    "@opensrc/deno-open@1.0.0": {
+      "integrity": "590decada8cf2d50f4b35c7d3a8d642e18e45d6e47078ea02a4dbf0096bbf9fd",
+      "dependencies": [
+        "jsr:@std/path@~0.218.2"
+      ]
+    },
+    "@std/assert@0.218.2": {
+      "integrity": "7f0a5a1a8cf86607cd6c2c030584096e1ffad27fc9271429a8cb48cfbdee5eaf"
+    },
     "@std/assert@1.0.11": {
       "integrity": "2461ef3c368fe88bc60e186e7744a93112f16fd110022e113a0849e94d1c83c1",
       "dependencies": [
@@ -71,6 +83,12 @@
     },
     "@std/net@1.0.4": {
       "integrity": "2f403b455ebbccf83d8a027d29c5a9e3a2452fea39bb2da7f2c04af09c8bc852"
+    },
+    "@std/path@0.218.2": {
+      "integrity": "b568fd923d9e53ad76d17c513e7310bda8e755a3e825e6289a0ce536404e2662",
+      "dependencies": [
+        "jsr:@std/assert@~0.218.2"
+      ]
     },
     "@std/path@1.0.8": {
       "integrity": "548fa456bb6a04d3c1a1e7477986b6cffbce95102d0bb447c67c4ee70e0364be"
