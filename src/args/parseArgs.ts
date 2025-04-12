@@ -110,28 +110,90 @@ Show a tree-map of the scanned files.
     --path=<path-prefix> Show only files with the given path prefix.
 ` }
 
+type ShowTree_HostParameter = {
+    isAnyHost: true
+} | {
+    isAnyHost: false
+    host: string
+}
+type ShowTree_PathParameter = {
+    isAnyPath: true
+} | {
+    isAnyPath: false
+    prefix: string
+}
 type ShowTreeParameters = {
     paramSet: 'show-tree'
     depth: number
-    hostname: {
-        isAnyHost: true
-    } | {
-        isAnyHost: false
-        host: string
-    }
-    path: {
-        isAnyPath: true
-    } | {
-        isAnyPath: false
-        prefix: string
-    }
+    hostname: ShowTree_HostParameter
+    path: ShowTree_PathParameter
 }
-function parseCommand_ShowTree(_args: readonly string[]) {
+function parseCommand_ShowTree(args: readonly string[]) {
+    if (args.length > 3) {
+        return {
+            paramSet: 'error',
+            error: `Invalid arguments for show-tree command: ${args.join(' ')}`,
+            helpText: getHelpTextForCommand('show-tree')!,
+        } as const
+    }
+
+    let depth = 5
+    let hostname: ShowTree_HostParameter = { isAnyHost: true }
+    let path: ShowTree_PathParameter = { isAnyPath: true }
+    let isDepthSet = false
+    let isHostnameSet = false
+    let isPathSet = false
+
+    function error(message: string) {
+        return {
+            paramSet: 'error',
+            error: message,
+            helpText: getHelpTextForCommand('show-tree')!,
+        } as const
+    }
+    for (const arg of args) {
+        if (arg.startsWith('--depth=')) {
+            if (isDepthSet) {
+                return error(`Duplicate depth argument: ${arg}`)
+            }
+            isDepthSet = true
+
+            const depthArg = arg.slice('--depth='.length)
+            depth = parseInt(depthArg, 10)
+            if (isNaN(depth) || depth <= 0) {
+                return error(`Invalid depth argument: ${depthArg}`)
+            }
+        } else if (arg.startsWith('--hostname=')) {
+            if (isHostnameSet) {
+                return error(`Duplicate hostname argument: ${arg}`)
+            }
+            isHostnameSet = true
+
+            const host = arg.slice('--hostname='.length)
+            if (host === '') {
+                return error(`Invalid hostname argument: ${arg}`)
+            }
+            hostname = { isAnyHost: false, host }
+        } else if (arg.startsWith('--path=')) {
+            if (isPathSet) {
+                return error(`Duplicate path argument: ${arg}`)
+            }
+            isPathSet = true
+
+            const pathPrefix = arg.slice('--path='.length)
+            if (pathPrefix === '') {
+                return error(`Invalid path argument: ${arg}`)
+            }
+            path = { isAnyPath: false, prefix: pathPrefix }
+        } else {
+            return error(`Invalid argument for show-tree command: ${arg}`)
+        }
+    }
     const params: ShowTreeParameters = {
         paramSet: 'show-tree',
-        depth: 5,
-        hostname: { isAnyHost: true },
-        path: { isAnyPath: true },
+        depth,
+        hostname,
+        path,
     }
     return params
 }

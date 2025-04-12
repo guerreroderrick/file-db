@@ -41,6 +41,29 @@ Deno.test(function testShowTreeAny() {
     assertEquals(args.path, { isAnyPath: true })
 })
 
+Deno.test(function testShowTreeErrors() {
+    const cases: string[][] = [
+        ['--depth=A'], ['--depth=0'],
+        ['--hostname='],
+        ['--path='],
+        ['--depth=3', '--depth=2'],
+        ['--hostname=host1', '--hostname=host2'],
+        ['--path=C:\\path1', '--path=C:\\path2'],
+    ]
+    for (const args of cases) {
+        const parsedArgs = parseArgs(['show-tree', ...args])
+        assert(parsedArgs.paramSet === 'error')
+    }
+})
+
+Deno.test(function testShowTreeArgs() {
+    const args = parseArgs(['show-tree', '--depth=3', '--hostname=host1', '--path=C:\\path name'])
+    assert(args.paramSet === 'show-tree')
+    assertEquals(args.depth, 3)
+    assertEquals(args.hostname, { isAnyHost: false, host: 'host1' })
+    assertEquals(args.path, { isAnyPath: false, prefix: 'C:\\path name' })
+})
+
 Deno.test(function testSyncArgs() {
     const args = parseArgs(['sync', 'filePath'])
     assert(args.paramSet === 'sync')

@@ -1,10 +1,7 @@
 # Todo
 
 - [-] Decide paths to ignore
-  - [-] Parse show-tree args
-    - [x] Scaffold show-tree args
-    - [x] Add missing ignore test
-    - [x] Refactor parse args
+  - [x] Parse show-tree args
   - [ ] Query ignore data
   - [ ] Save html with d3
   - [ ] Open browser to html
