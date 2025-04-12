@@ -55,9 +55,15 @@
         const y = d3.scaleLinear().rangeRound([0, height])
 
         const format = d3.format(",d")
-        const name = d => d.ancestors().reverse()
-          .map(d => d.data.name)
+        const rootName = d => d.ancestors().reverse()
+          .map((d, i) => d.data.descendantCount > 1
+            ? `${i === 0 ? '' : ' '}${d.data.name}` + ` (${format(d.data.descendantCount)}) `
+            : d.data.name
+          )
           .join('/')
+        const childName = d => d.data.descendantCount > 1
+          ? d.data.name + ` (${format(d.data.descendantCount)})`
+          : d.data.name
 
         svg
           .attr('viewBox', [0.5, -30.5, width, height + 30])
@@ -79,10 +85,10 @@
             .attr('cursor', 'pointer')
             .on('click', (event, d) => d === root ? zoomOut(root) : zoomIn(d))
           node.append('title')
-            .text(d => `${name(d)}\n${format(d.value)}`)
+            .text(d => `${rootName(d)}\n${format(d.value)}`)
           node.append('rect')
             .attr('id', d => (d.leafUid = uid('leaf')).id)
-            .attr('fill', d => d === root ? '#fff' : d.children ? '#ccc' : color(d.data.name))
+            .attr('fill', d => d === root ? '#fff' : d.children ? '#eee' : color(d.data.name))
             .attr('stroke', '#fff')
           const clipPath = node.append('clipPath')
             .attr('id', d => (d.clipUid = uid('clip')).id)
@@ -93,9 +99,10 @@
             .attr('clip-path', d => d.clipUid.href)
             .attr('font-weight', d => d === root ? 'bold' : null)
             .selectAll('tspan')
-            .data(d => (d === root ? name(d) : d.data.name)
+            .data(d => (d === root ? rootName(d) : childName(d))
               .split(/(?=[A-Z][^A-Z])/g)
-              .concat(format(d.value)))
+              .concat(format(d.value))
+            )
             .join('tspan')
             .attr('x', 3)
             .attr('y', (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`)

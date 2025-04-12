@@ -62,6 +62,7 @@ type FullTreeMapNode = {
     name: string
     value?: number
     children: FullTreeMapNode[]
+    descendantCount: number
 }
 
 const replacementSearch = '<!-- TreeMap data placeholder -->'
@@ -118,10 +119,20 @@ async function serveHtml({
 }
 
 function fillTreeMapData(data: TreeMapNode) {
+    const children = data.children?.map(child => fillTreeMapData(child)) ?? []
+    const descendantCount = children.length
+        + children
+            .reduce(
+                (acc, child) =>
+                    acc + child.descendantCount
+                , 0
+            )
+
     const filled: FullTreeMapNode = {
         ...data,
         value: data.size,
-        children: data.children?.map(child => fillTreeMapData(child)) ?? [],
+        children,
+        descendantCount,
     }
     return filled
 }
