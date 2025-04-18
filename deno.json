@@ -6,7 +6,7 @@
     "serve": "deno run --allow-read --allow-write --allow-run --allow-net src/web/serve.ts",
     "test": "deno test --watch --allow-read --allow-write --allow-run",
     "test-once": "deno test --allow-read --allow-write --allow-run",
-    "update-test-snapshots": "deno test --allow-read --allow-write -- --update"
+    "update-test-snapshots": "deno test --allow-read --allow-write --allow-run -- --update"
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@1"
