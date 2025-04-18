@@ -4,7 +4,7 @@ type GetDescendantParams = {
     hostname: { isAnyHost: true } | { isAnyHost: false; host: string }
     path: { isAnyPath: true } | { isAnyPath: false; prefix: string }
 }
-type FileEntry = {
+export type FileEntry = {
     hostname: string
     path: string
     size: number

@@ -23,7 +23,7 @@ export async function showTree(args: ShowTreeParams) {
     })
 }
 
-type TreeMapNode = {
+export type TreeMapNode = {
     name: string
     size?: number
     children?: TreeMapNode[]

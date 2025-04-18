@@ -4,7 +4,7 @@
   - [x] Parse show-tree args
   - [x] Save html with d3
   - [-] Query ignore data
-    - [ ] Translate paths to tree node
+    - [x] Translate paths to tree node
     - [ ] pull paths from db
   - [ ] Open browser to html
 - [ ] refactor db migrations

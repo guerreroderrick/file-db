@@ -1,0 +1,122 @@
+export const snapshot = {};
+
+snapshot[`testPathToTree_emptyPathsIsEmpty 1`] = `[]`;
+
+snapshot[`testPathToTree_singlePath 1`] = `
+[
+  {
+    children: [],
+    name: "host1\\\\path1",
+    size: 100,
+  },
+]
+`;
+
+snapshot[`testPathToTree_toPathsDifferentHosts 1`] = `
+[
+  {
+    children: [
+      {
+        children: [],
+        name: "path1",
+        size: 100,
+      },
+    ],
+    name: "host1",
+    size: undefined,
+  },
+  {
+    children: [
+      {
+        children: [],
+        name: "path1",
+        size: 200,
+      },
+    ],
+    name: "host2",
+    size: undefined,
+  },
+]
+`;
+
+snapshot[`testPathToTree_differentPathsSameHost 1`] = `
+[
+  {
+    children: [
+      {
+        children: [],
+        name: "path1",
+        size: 100,
+      },
+      {
+        children: [],
+        name: "path2",
+        size: 200,
+      },
+    ],
+    name: "host1",
+  },
+]
+`;
+
+snapshot[`testPathToTree_sameChildren 1`] = `
+[
+  {
+    children: [
+      {
+        children: [],
+        name: "child1",
+        size: 100,
+      },
+      {
+        children: [],
+        name: "child2",
+        size: 200,
+      },
+    ],
+    name: "host1\\\\path1\\\\path2",
+  },
+]
+`;
+
+snapshot[`testPathToTree_differentDescendant 1`] = `
+[
+  {
+    children: [
+      {
+        children: [],
+        name: "path2",
+        size: 100,
+      },
+      {
+        children: [
+          {
+            children: [],
+            name: "path4\\\\child",
+            size: 200,
+          },
+        ],
+        name: "path3",
+        size: undefined,
+      },
+    ],
+    name: "host1\\\\path1",
+  },
+]
+`;
+
+snapshot[`testPathToTree_pathHasSize 1`] = `
+[
+  {
+    children: [
+      {
+        children: [],
+        name: "path3\\\\child",
+        size: 200,
+      },
+    ],
+    name: "host1\\\\path1\\\\path2",
+    size: 100,
+  },
+]
+`;
