@@ -1,7 +1,9 @@
 import { open } from "../../deps.ts";
 import { getDefaultDatabase } from "../db/getDefaultDatabase.ts";
 import { getDescendants } from "../db/getDescendants.ts";
+import { tryCatch } from "../util/tryCatch.ts";
 import { pathsToTree } from "./pathsToTree_test.ts";
+import * as path from 'jsr:@std/path'
 
 type ShowTreeParams = {
     depth: number
@@ -66,9 +68,9 @@ type FullTreeMapNode = {
 
 const replacementSearch = '<!-- TreeMap data placeholder -->'
 async function renderTreeMap(data: FullTreeMapNode) {
-    const templatePath = import.meta.resolve('./templates/show-tree-index.html-template')
-    const templateUrl = new URL(templatePath)
-    const template = await Deno.readTextFile(templateUrl)
+    const templatePath = await getResourcePath(import.meta, './templates/show-tree-index.html-template')
+
+    const template = await Deno.readTextFile(templatePath)
     const treeMapData = JSON.stringify(data)
     const html = template.replace(replacementSearch, treeMapData)
     return html
@@ -134,4 +136,20 @@ function fillTreeMapData(data: TreeMapNode) {
         descendantCount,
     }
     return filled
+}
+
+async function getResourcePath(importMeta: ImportMeta, resourcePath: string) {
+    const templatePath = importMeta.resolve(resourcePath)
+    const templateUrl = new URL(templatePath)
+    const tryStat = await tryCatch(async () =>
+        await Deno.stat(templateUrl)
+    )
+    console.warn({ templatePath, })
+    if (!tryStat.error) { return templateUrl }
+
+    const execPath = Deno.execPath();
+    const appDirectory = path.dirname(execPath)
+    const resourceAppPath = path.join(appDirectory, resourcePath)
+    const resourceAppUrl = new URL(`file://${resourceAppPath}`)
+    return resourceAppUrl
 }
