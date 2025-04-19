@@ -8,6 +8,7 @@ export type RunMainParams = {
     helpText: string
 } | (GlobalOptions
     & (IgnoreParameters
+        | MergeParameters
         | ShowTreeParameters
         | SyncParameters
     )
@@ -20,6 +21,7 @@ type GlobalOptions = {
 function getHelpTextForCommand(command: string): string | undefined {
     switch (command.toLowerCase()) {
         case 'ignore': return getCommandHelp_Ignore()
+        case 'merge': return getCommandHelp_Merge()
         case 'show-tree': return getCommandHelp_ShowTree()
         case 'sync': return getCommandHelp_Sync()
         default:
@@ -113,6 +115,8 @@ export function parseArgs(args: readonly string[]): RunMainParams {
     switch (command) {
         case 'ignore':
             return addGlobalOptions(parseCommand_Ignore(commandArgs))
+        case 'merge':
+            return addGlobalOptions(parseCommand_Merge(commandArgs))
         case 'show-tree':
             return addGlobalOptions(parseCommand_ShowTree(commandArgs))
         case 'sync':
@@ -167,6 +171,34 @@ function parseCommand_Ignore(args: readonly string[]) {
         paramSet: 'ignore action',
         action,
         filePath,
+    }
+    return params
+}
+
+function getCommandHelp_Merge() { return `
+Usage: file-db merge <remote-db-path>
+Merge the database file with the local database. Conflicting files
+    will reserve the latest information, trusting the timestamps
+    within the database.
+` }
+
+type MergeParameters = {
+    paramSet: 'merge'
+    remoteDbPath: string
+}
+
+function parseCommand_Merge(args: readonly string[]) {
+    const [remoteDbPath] = args
+    if (remoteDbPath === undefined || args.length > 1) {
+        return {
+            paramSet: 'error',
+            error: `Invalid arguments for merge command: ${args.join(' ')}`,
+            helpText: getHelpTextForCommand('merge')!,
+        } as const
+    }
+    const params: MergeParameters = {
+        paramSet: 'merge',
+        remoteDbPath,
     }
     return params
 }

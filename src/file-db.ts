@@ -37,6 +37,15 @@ async function runParameterSet(params: RunMainParams) {
             })
             return
         }
+        case 'merge': {
+            const { dbPath, remoteDbPath } = params
+            console.log({
+                debug: 'Merge command set.',
+                dbPath,
+                remoteDbPath,
+            })
+            return
+        }
         case 'show-tree': {
             const { dbPath, depth, hostname, path, keepAlive } = params
             return await showTree({ dbPath, depth, hostname, path, keepAlive })
