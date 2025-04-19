@@ -59,7 +59,7 @@ type BuildNode = {
     size?: number
     children?: BuildNode[]
 }
-function pathsToTree(entries: FileEntry[]) {
+export function pathsToTree(entries: FileEntry[]) {
     function addChild(children: BuildNode[]) {
         return function (node: BuildNode) {
             children.push(node)

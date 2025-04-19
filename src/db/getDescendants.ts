@@ -1,8 +1,10 @@
+import { DB } from "../../deps.ts";
 
 type GetDescendantParams = {
     depth: number
     hostname: { isAnyHost: true } | { isAnyHost: false; host: string }
     path: { isAnyPath: true } | { isAnyPath: false; prefix: string }
+    db: DB
 }
 export type FileEntry = {
     hostname: string
@@ -10,29 +12,31 @@ export type FileEntry = {
     size: number
 }
 export function getDescendants({
+    db,
+    // depth,
+    hostname,
+    path,
 }: GetDescendantParams) {
 
-    const descendants: FileEntry[] = [
-        {
-            hostname: 'child1',
-            path: 'path',
-            size: 100,
-        },
-        {
-            hostname: 'child2',
-            path: 'path',
-            size: 200,
-        },
-        {
-            hostname: 'child3',
-            path: '1',
-            size: 10,
-        },
-        {
-            hostname: 'child3',
-            path: '2',
-            size: 20,
-        },
-    ]
+    const rows = db.query<[string, string, number]>(`
+select hostname, path, size
+    from [files_Log]
+    where 1=1
+        and (:paramHostname is null or hostname = :paramHostname)
+        and (:paramPath is null
+            or path = :paramPath
+            or path like :paramPath || '/%'
+            or path like :paramPath || '\\%'
+            )
+`, {
+    paramHostname: hostname.isAnyHost ? null : hostname.host,
+    paramPath: path.isAnyPath ? null : path.prefix,
+})
+    const descendants: FileEntry[] = rows
+        .map(([hostname, path, size]) => ({
+            hostname,
+            path,
+            size,
+        }))
     return descendants
 }

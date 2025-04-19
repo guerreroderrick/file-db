@@ -1,5 +1,7 @@
 import { open } from "../../deps.ts";
+import { getDefaultDatabase } from "../db/getDefaultDatabase.ts";
 import { getDescendants } from "../db/getDescendants.ts";
+import { pathsToTree } from "./pathsToTree_test.ts";
 
 type ShowTreeParams = {
     depth: number
@@ -14,7 +16,7 @@ export async function showTree(args: ShowTreeParams) {
     })
     const { keepAlive } = args
 
-    const data=  await queryData(args)
+    const data= queryData(args)
     const fullData = fillTreeMapData(data)
     const html = await renderTreeMap(fullData)
     await serveHtml({
@@ -28,46 +30,31 @@ export type TreeMapNode = {
     size?: number
     children?: TreeMapNode[]
 }
-async function queryData({
+function queryData({
     depth,
     hostname,
     path,
 }: ShowTreeParams) {
+    const db = getDefaultDatabase()
     const descendants = getDescendants({
+        db,
         depth,
         hostname,
         path,
     })
-    console.log({ descendants })
-    
-    await Promise.resolve()
-    const root: TreeMapNode = {
-        name: 'root',
-        children: [
-            {
-                name: 'child1',
-                size: 100,
-            },
-            {
-                name: 'child2',
-                size: 200,
-            },
-            {
-                name: 'child3',
-                children: [
-                    {
-                        name: 'child3.1',
-                        size: 10,
-                    },
-                    {
-                        name: 'child3.2',
-                        size: 20,
-                    },
-                ],
-            },
-        ],
+    const tree = pathsToTree(descendants)
+    if (tree?.length === 1) {
+        return tree[0]
     }
-    return root
+    if (tree === undefined) {
+        const empty: TreeMapNode = { name: '<No results>' }
+        return empty
+    }
+    const results: TreeMapNode = {
+        name: 'Results',
+        children: tree,
+    }
+    return results
 }
 
 type FullTreeMapNode = {
