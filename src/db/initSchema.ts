@@ -22,8 +22,7 @@ select id, description, updatedAt
     limit 1
         `)
     if (versionRow.length === 0) {
-        initEmptyDatabase(db)
-        return
+        versionRow.push([0n, 'Empty database', new Date()])
     }
     const [id, description, updatedAt] = versionRow[0]
     const { id: currentId } = currentVersion
@@ -44,6 +43,20 @@ create table if not exists [version] (
 }
 
 function initTable_files_Log(db: DB) {
+    db.execute(`
+create table if not exists [files_Log] (
+    hostname text not null
+    , path text not null
+    , size integer not null
+    , modifyTime datetime not null
+    , hash bytea null
+    , version bigint not null
+    , isArchived bit not null default 0
+    )
+`)
+}
+
+function initTable_files_Log_v2(db: DB) {
     db.execute(`
 create table if not exists [files_Log] (
     hostname text not null
@@ -84,17 +97,6 @@ create table if not exists [ignoredFiles_Log] (
 `)
 }
 
-function initEmptyDatabase(db: DB) {
-    const { id, description, updatedAt } = currentVersion
-    db.query(`
-insert into [version] (id, description, updatedAt)
-    values (?, ?, ?)
-        `, [id, description, updatedAt])
-
-    initTable_files_Log(db)
-    initTable_pathErrors_Log(db)
-}
-
 function migrateDatabase(db: DB, sourceVersion: DBVersion) {
     const { id, description, } = currentVersion
     const { id: sourceId, description: sourceDescription, updatedAt: sourceUpdatedAt } = sourceVersion
@@ -104,6 +106,13 @@ function migrateDatabase(db: DB, sourceVersion: DBVersion) {
     })
 db.transaction(() => {
     switch (`${sourceId}`) {
+        case '0':
+            db.execute(`
+insert into [version] (id, description, updatedAt)
+    values (0, 'Empty database', 0)
+`)
+            initTable_files_Log(db)
+            /* falls through */
         case '1':
             initTable_pathErrors_Log(db)
             /* falls through */
@@ -111,15 +120,13 @@ db.transaction(() => {
             db.query(`
 alter table [files_Log] rename to [files_Log_migrate]
             `)
-            initTable_files_Log(db)
-            db.query(`
+            initTable_files_Log_v2(db)
+            db.execute(`
 insert into [files_Log] (hostname, path, version, isArchived, size, hashTime, modifyTime, hash)
     select hostname, path, version, isArchived, size, null, modifyTime, hash
         from [files_Log_migrate]
-            `)
-            db.query(`
-drop table [files_Log_migrate]
-            `)
+; drop table [files_Log_migrate]
+`)
             /* falls through */
         case '3':
             initTable_ignoredFiles_Log(db)
@@ -128,8 +135,8 @@ drop table [files_Log_migrate]
             db.query(`
 alter table [files_Log] rename to [files_Log_migrate]
             `)
-            initTable_files_Log(db)
-            db.query(`
+            initTable_files_Log_v2(db)
+            db.execute(`
 insert into [files_Log] (hostname, path, version, isArchived, size, hashTime, modifyTime, hash)
     select hostname, path, version, isArchived, size, hashTime, modifyTime, hash
         from [files_Log_migrate]

@@ -3,6 +3,7 @@ import { syncFileDb } from "./commands/syncFileDb.ts";
 import { parseArgs, RunMainParams } from "./args/parseArgs.ts";
 import { performIgnoreAction } from "./commands/performIgnoreAction.ts";
 import { showTree } from "./commands/showTree.ts";
+import { mergeDatabaseFile } from "./commands/mergeDatabaseFile.ts";
 
 if (import.meta.main) {
     await main(Deno.args)
@@ -39,12 +40,10 @@ async function runParameterSet(params: RunMainParams) {
         }
         case 'merge': {
             const { dbPath, remoteDbPath } = params
-            console.log({
-                debug: 'Merge command set.',
+            return await mergeDatabaseFile({
                 dbPath,
                 remoteDbPath,
             })
-            return
         }
         case 'show-tree': {
             const { dbPath, depth, hostname, path, keepAlive } = params
