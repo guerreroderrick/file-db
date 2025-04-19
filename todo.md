@@ -5,7 +5,10 @@
   - [x] Save html with d3
   - [-] Query ignore data
     - [x] Translate paths to tree node
-    - [ ] pull paths from db
+    - [x] pull paths from db
+    - [ ] merge dbs
+    - [ ] include child count in graphs
+    - [ ] prevent text overwriting in treemap
   - [ ] Open browser to html
 - [ ] refactor db migrations
 
