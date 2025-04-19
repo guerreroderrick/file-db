@@ -35,7 +35,7 @@ Deno.test(function testHelpArgsWithUnknownCommand() {
 
 Deno.test(function testShowTreeAny() {
     const args = parseArgs(['show-tree'])
-    assert(args.paramSet === 'show-tree')
+    assert(args.paramSet === 'show-tree', `show-tree param set was actually ${JSON.stringify(args)}`)
     assertEquals(args.depth, 5)
     assertEquals(args.hostname, { isAnyHost: true })
     assertEquals(args.path, { isAnyPath: true })

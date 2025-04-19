@@ -6,9 +6,16 @@ export type RunMainParams = {
 } | {
     paramSet: 'help'
     helpText: string
-} | IgnoreParameters
-  | ShowTreeParameters
-  | SyncParameters
+} | (GlobalOptions
+    & (IgnoreParameters
+        | ShowTreeParameters
+        | SyncParameters
+    )
+)
+
+type GlobalOptions = {
+    dbPath: string
+}
 
 function getHelpTextForCommand(command: string): string | undefined {
     switch (command.toLowerCase()) {
@@ -36,6 +43,13 @@ export function parseArgs(args: readonly string[]): RunMainParams {
             }
         }
         const [command] = helpArgs
+        if (command === '--global-options') {
+            return {
+                paramSet: 'help',
+                helpText: getGlobalOptionsHelp(),
+            }
+        }
+
         const commandHelpText = getHelpTextForCommand(command)
         if (commandHelpText === undefined) {
             return {
@@ -50,12 +64,59 @@ export function parseArgs(args: readonly string[]): RunMainParams {
         }
     }
 
-    const command = args[0]?.toLowerCase()
-    const commandArgs = args.slice(1)
+    function parseGlobalOptions(args: readonly string[]) {
+        const globalOptions: GlobalOptions = {
+            dbPath: 'file-db.sqlite3',
+        }
+        const commandArgs: string[] = [...args]
+        for (let i = 0; i < args.length; i++) {
+            const arg = args[i]
+            if (arg.startsWith('--db=')) {
+                const dbPath = arg.slice('--db='.length)
+                if (dbPath === '') {
+                    return {
+                        error: `Invalid database path: ${arg}`,
+                    } as const
+                }
+                globalOptions.dbPath = dbPath
+                commandArgs.splice(i, 1)
+            }
+        }
+        const command = args[0]?.toLowerCase()
+        commandArgs.splice(0, 1)
+        return {
+            globalOptions,
+            command,
+            commandArgs,
+        }
+    }
+    const {
+        error,
+        globalOptions,
+        command,
+        commandArgs,
+    } = parseGlobalOptions(args)
+    if (error) {
+        return {
+            paramSet: 'error',
+            error,
+            helpText,
+        } as const
+    }
+
+    function addGlobalOptions<T>(params: T): T & GlobalOptions {
+        return {
+            ...params,
+            ...globalOptions,
+        } as T & GlobalOptions
+    }
     switch (command) {
-        case 'ignore': return parseCommand_Ignore(commandArgs)
-        case 'show-tree': return parseCommand_ShowTree(commandArgs)
-        case 'sync': return parseCommand_Sync(commandArgs)
+        case 'ignore':
+            return addGlobalOptions(parseCommand_Ignore(commandArgs))
+        case 'show-tree':
+            return addGlobalOptions(parseCommand_ShowTree(commandArgs))
+        case 'sync':
+            return addGlobalOptions(parseCommand_Sync(commandArgs))
     }
 
     return {
@@ -66,13 +127,21 @@ export function parseArgs(args: readonly string[]): RunMainParams {
 }
 
 function getCommandHelp() { return `
-Usage: file-db <command> [options]
+Usage: file-db [global-options] <command> [options]
 Commands:
-  help, --help, -h  Show this help message and exit
-  help <command>    Show help for a specific command
-  normalize         Normalize paths in the database
-  show-tree         Show a tree-map of the scanned files
-  sync <path>       Sync the database with the file system
+  help, --help, -h       Show this help message and exit
+  help <command>         Show help for a specific command
+  help --global-options  Show help for global options
+  normalize              Normalize paths in the database
+  show-tree              Show a tree-map of the scanned files
+  sync <path>            Sync the database with the file system
+` }
+
+function getGlobalOptionsHelp() { return `
+Usage: file-db [global-options] <command> [options]
+Global Options:
+  --db=<path>  Path to the database file. The default is
+                   file-db.sqlite3 in the current directory.
 ` }
 
 function getCommandHelp_Ignore() { return `

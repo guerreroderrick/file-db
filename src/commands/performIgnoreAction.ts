@@ -3,7 +3,16 @@ import { assert } from 'jsr:@std/assert/assert'
 import { getDefaultDatabase } from "../db/getDefaultDatabase.ts";
 import { addIgnorePath } from "../db/addIgnorePath.ts";
 
-export function performIgnoreAction(action: string, filePath: string) {
+type PerformIgnoreActionParams = {
+    dbPath: string
+    action: string
+    filePath: string
+}
+export function performIgnoreAction({
+    dbPath,
+    action,
+    filePath,
+}: PerformIgnoreActionParams) {
     assert(action === 'add', `Unknown action: ${action}`)
 
     if (!isAbsolute(filePath)) {
@@ -11,7 +20,7 @@ export function performIgnoreAction(action: string, filePath: string) {
         return
     }
     const hostname = Deno.hostname()
-    const db = getDefaultDatabase();
+    const db = getDefaultDatabase(dbPath);
 
     switch (action) {
         case 'add': {

@@ -36,7 +36,9 @@ async function main() {
     await runOrThrow('./file-db.exe', ['--help'], {
         cwd: './dist',
     })
-    await runOrThrow('./file-db.exe', ['show-tree'], {
+    await runOrThrow('./file-db.exe', ['show-tree',
+        '--db=../file-db.sqlite3',
+    ], {
         cwd: './dist',
     })
     console.log(`Complete all tasks after ${Date.now() - start}ms`)

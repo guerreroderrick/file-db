@@ -68,20 +68,27 @@ class PooledHashUpdate {
     }
 }
 
-export async function syncFileDb(filePath: string) {
+type SyncFileDbParams = {
+    dbPath: string
+    filePath: string
+}
+export async function syncFileDb({
+    dbPath,
+    filePath,
+}: SyncFileDbParams) {
 
     const hasher = new PooledHashUpdate(4)
     try {
-        return await syncFileDb_withHasher(hasher, filePath)
+        return await syncFileDb_withHasher(hasher, dbPath, filePath)
     } finally {
         hasher[Symbol.asyncDispose]()
     }
 }
 
-async function syncFileDb_withHasher(hasher: PooledHashUpdate, filePath: string) {
+async function syncFileDb_withHasher(hasher: PooledHashUpdate, dbPath: string, filePath: string) {
 
     const hostname = Deno.hostname()
-    const db = getDefaultDatabase();
+    const db = getDefaultDatabase(dbPath)
 
     let numPathErrors = 0
     let numFiles = 0

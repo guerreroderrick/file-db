@@ -6,6 +6,7 @@ import { pathsToTree } from "./pathsToTree_test.ts";
 import * as path from 'jsr:@std/path'
 
 type ShowTreeParams = {
+    dbPath: string
     depth: number
     hostname: { isAnyHost: true } | { isAnyHost: false; host: string; }
     path: { isAnyPath: true } | { isAnyPath: false; prefix: string; }
@@ -33,11 +34,12 @@ export type TreeMapNode = {
     children?: TreeMapNode[]
 }
 function queryData({
+    dbPath,
     depth,
     hostname,
     path,
 }: ShowTreeParams) {
-    const db = getDefaultDatabase()
+    const db = getDefaultDatabase(dbPath)
     const descendants = getDescendants({
         db,
         depth,

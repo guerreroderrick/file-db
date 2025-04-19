@@ -29,17 +29,24 @@ async function runParameterSet(params: RunMainParams) {
             return
         }
         case 'ignore action': {
-            const { action, filePath } = params
-            await performIgnoreAction(action, filePath)
+            const { dbPath, action, filePath } = params
+            await performIgnoreAction({
+                dbPath,
+                action,
+                filePath,
+            })
             return
         }
         case 'show-tree': {
-            const { depth, hostname, path, keepAlive } = params
-            return await showTree({ depth, hostname, path, keepAlive })
+            const { dbPath, depth, hostname, path, keepAlive } = params
+            return await showTree({ dbPath, depth, hostname, path, keepAlive })
         }
         case 'sync': {
-            const { filePath } = params
-            const { numFiles, numPathErrors } = await syncFileDb(filePath)
+            const { dbPath, filePath } = params
+            const { numFiles, numPathErrors } = await syncFileDb({
+                dbPath,
+                filePath,
+            })
             console.log({
                 debug: 'Sync complete',
                 numFiles,
