@@ -136,7 +136,8 @@ Commands:
   help, --help, -h       Show this help message and exit
   help <command>         Show help for a specific command
   help --global-options  Show help for global options
-  normalize              Normalize paths in the database
+  ignore <parameters ..> Add or remove ignored paths
+  merge <remote-db>      Merge a remote database
   show-tree              Show a tree-map of the scanned files
   sync <path>            Sync the database with the file system
 ` }
