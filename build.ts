@@ -1,3 +1,5 @@
+import * as esbuild from 'npm:esbuild'
+import { denoPlugins } from 'jsr:@luca/esbuild-deno-loader'
 
 if (import.meta.main) {
     await main()
@@ -11,6 +13,32 @@ async function main() {
         cwd: './go',
     })
     await runOrThrow('deno', ['task', 'test-once'])
+    await esbuild.build({
+        plugins: [...denoPlugins()],
+        entryPoints: ['./src/file-db.ts'],
+        outfile: './dist/file-db.js',
+        bundle: true,
+        format: 'esm',
+        treeShaking: true,
+    })
+    await esbuild.stop()
+    await Deno.writeTextFile('./dist/deno.json', '{}')
+
+    await Deno.mkdir('./dist/templates', { recursive: true })
+    await Deno.copyFile('./src/commands/templates/show-tree-index.html-template', './dist/templates/show-tree-index.html-template')
+    await runOrThrow('deno', ['compile',
+        '--output', './',
+        '--target', 'x86_64-pc-windows-msvc',
+        ...'--allow-read --allow-write --allow-net --allow-run --allow-sys ./file-db.js'.split(' '),
+    ], {
+        cwd: './dist',
+    })
+    await runOrThrow('./file-db.exe', ['--help'], {
+        cwd: './dist',
+    })
+    await runOrThrow('./file-db.exe', ['show-tree'], {
+        cwd: './dist',
+    })
     console.log(`Complete all tasks after ${Date.now() - start}ms`)
 }
 
