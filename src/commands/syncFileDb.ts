@@ -69,12 +69,22 @@ class PooledHashUpdate {
 }
 
 export async function syncFileDb(filePath: string) {
+
+    const hasher = new PooledHashUpdate(4)
+    try {
+        return await syncFileDb_withHasher(hasher, filePath)
+    } finally {
+        hasher[Symbol.asyncDispose]()
+    }
+}
+
+async function syncFileDb_withHasher(hasher: PooledHashUpdate, filePath: string) {
+
     const hostname = Deno.hostname()
     const db = getDefaultDatabase();
 
     let numPathErrors = 0
     let numFiles = 0
-    await using hasher = new PooledHashUpdate(4)
     let lastOutput = Date.now()
     const encoder = new TextEncoder()
     const currentCaseFilePath = await getCurrentPathCase(filePath)
