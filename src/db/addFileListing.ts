@@ -45,9 +45,9 @@ where hostname = ?
     and isArchived = false
         `, [hostname, path, version])
     db.query(`
-insert into [files_Log] (hostname, path, version, size, modifyTime)
-values (?, ?, ?, ?, ?)
-        `, [hostname, path, version + 1, size, modifyTime])
+insert into [files_Log] (hostname, path, version, hashTime, size, modifyTime)
+values (?, ?, ?, ?, ?, ?)
+        `, [hostname, path, version + 1, Date.now(), size, modifyTime])
     return {
         hash: null,
     }

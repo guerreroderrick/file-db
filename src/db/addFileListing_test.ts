@@ -4,6 +4,7 @@ import { addFileListing } from "./addFileListing.ts"
 import { updateFileHash } from "./updateFileHash.ts"
 import { dbTestData } from "./__test_dbTestData.ts"
 import { FileEntryFromArray } from "./getFilesNeedingHash_test.ts";
+import { assertGreater } from "@std/assert/greater";
 
 const {
     testDb,
@@ -37,6 +38,13 @@ Deno.test(function testUpdateFileListing() {
         hostname: 'test-hostname',
         file: updatedFile,
     })
+    const [[version, hashTime]] = testDb.query<[number, number]>(`
+select version, hashTime
+    from [files_Log]
+    where isArchived = 0
+`)
+    assertEquals(version, 1)
+    assertGreater(hashTime, 0)
 })
 
 Deno.test(function testUpdateFileListingSameIgnored() {
