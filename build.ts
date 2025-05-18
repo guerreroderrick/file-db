@@ -1,5 +1,7 @@
 import * as esbuild from 'npm:esbuild'
 import { denoPlugins } from 'jsr:@luca/esbuild-deno-loader'
+import { JSZip } from 'https://deno.land/x/jszip/mod.ts'
+import { path } from "./deps.ts";
 
 if (import.meta.main) {
     await main()
@@ -36,6 +38,22 @@ async function main() {
     await runOrThrow('./file-db.exe', ['--help'], {
         cwd: './dist',
     })
+    await zipDist({
+        zipPath: './dist/file-db.zip',
+        zipSource: {
+            fileEntries: [{ sourceFile: './dist/file-db.exe', },],
+            folderEntries: [
+                {
+                    folderName: 'templates',
+                    fileEntries: [{ sourceFile: './dist/templates/show-tree-index.html-template', },],
+                },
+                {
+                    folderName: 'go',
+                    fileEntries: [{ sourceFile: './go/file-db-go.exe', },],
+                },
+            ],
+        },
+    })
     console.log(`Complete all tasks after ${Date.now() - start}ms`)
 }
 
@@ -57,4 +75,58 @@ async function runOrThrow(command: string, args?: string[], options?: RunOrThrow
         throw new Error(`Command ${command} failed with code ${status.code}`)
     }
     console.log(`${command} ${args?.join(' ')}: success after ${Date.now() - start}ms`)
+}
+
+type ZipDistParams = {
+    zipPath: string
+    zipSource: ZipSource
+}
+type ZipSource = {
+    fileEntries?: ZipFileSource[]
+    folderEntries?: ZipFolderSource[]
+}
+type ZipFileSource = {
+    sourceFile: string
+    targetName?: string
+}
+type ZipFolderSource = {
+    folderName: string
+    fileEntries?: ZipFileSource[]
+    folderEntries?: ZipFolderSource[]
+}
+async function zipDist({
+    zipPath,
+    zipSource,
+}: ZipDistParams) {
+
+    const zip = new JSZip()
+    await addZipEntries(zip, zipSource)
+    await zip.writeZip(zipPath)
+}
+
+async function addZipEntries(zip: JSZip, zipSource: ZipSource) {
+    for (const fileEntry of (zipSource.fileEntries ?? [])) {
+        const { sourceFile, targetName } = fileEntry
+        const fileName = targetName ?? path.basename(sourceFile)
+        const sourceContents = await Deno.readFile(sourceFile)
+        zip.addFile(fileName, sourceContents)
+        console.log({ 
+            debug: 'add file',
+            fileName,
+            sourceFile,
+            size: sourceContents.byteLength,
+        })
+    }
+    for (const folderEntry of (zipSource.folderEntries ?? [])) {
+        const { folderName } = folderEntry
+        const folder = zip.folder(folderName)
+        if (!folder) {
+            throw new Error(`Failed to create folder ${folderName}`)
+        }
+        console.log({ 
+            debug: 'add folder',
+            folderName,
+        })
+        await addZipEntries(folder, folderEntry)
+    }
 }
