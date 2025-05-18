@@ -51,9 +51,12 @@ async function runParameterSet(params: RunMainParams) {
         }
         case 'sync': {
             const { dbPath, filePath } = params
+            const correctDrivePaths = filePath.match(/^[a-z]:$/i)
+                ? `${filePath}/`
+                : filePath
             const { numFiles, numPathErrors } = await syncFileDb({
                 dbPath,
-                filePath,
+                filePath: correctDrivePaths,
             })
             console.log({
                 debug: 'Sync complete',

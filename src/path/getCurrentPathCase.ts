@@ -14,9 +14,14 @@ export async function getCurrentPathCase(filePath: string) {
         default: { const _: never = type }
     }
     const pathParts = canonicalPath.split(slashDirection)
+        .filter((part) => part.length > 0)
+    if (pathParts.length === 1 && pathParts[0].match(/^[a-z]:/i)) {
+        return filePath.toUpperCase()
+    }
     for (let i = pathParts.length - 1; i > 0; i--) {
         const parent = [...pathParts.slice(0, i), '']
             .join(slashDirection)
+
         const current = pathParts[i]
         const matching = await getMatchingDirectoryEntries(parent, current)
         if (matching.length === 0) {

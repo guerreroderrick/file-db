@@ -15,3 +15,16 @@ Deno.test(async function testCurrentPathCase() {
         assertEquals(lastFile, expected)
     }
 })
+
+Deno.test(async function testDrivePathCase() {
+    const cases: [test: string, expected: string][] = [
+        ['c:/', 'C:/'],
+        ['c:\\', 'C:\\'],
+        ['w:/', 'W:/'], // doesn't require existing drive
+        ['w:\\', 'W:\\'],
+    ]
+    for (const [test, expected] of cases) {
+        const path = await getCurrentPathCase(test)
+        assertEquals(path, expected)
+    }
+})
