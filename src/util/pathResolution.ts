@@ -1,6 +1,13 @@
 import { path } from '../../deps.ts'
 import { tryCatch } from './tryCatch.ts'
 
+export function stripFilePrefix(fileUrl: URL) {
+    const filePath = fileUrl.toString()
+    return filePath.startsWith('file:///')
+        ? filePath.slice('file:///'.length)
+        : filePath
+}
+
 export type ResolvePathWithFallbackParams = {
     resolved: string
     fallbackAppPath: string
@@ -26,17 +33,11 @@ export async function resolvePathWithFallback({
         return resourceAppUrl
     })()
 
-    const hashCommandPath = result.toString()
-    const resultPath = await Promise.resolve(hashCommandPath.startsWith('file:///')
-        ? hashCommandPath.slice('file:///'.length)
-        : hashCommandPath)
-
     if (logResult) {
         console.warn({
             fallbackAppPath,
             result: result.toString(),
-            resultPath,
         })
     }
-    return resultPath
+    return result
 }
