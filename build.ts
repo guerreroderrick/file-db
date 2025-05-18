@@ -2,6 +2,7 @@ import * as esbuild from 'npm:esbuild'
 import { denoPlugins } from 'jsr:@luca/esbuild-deno-loader'
 import { JSZip } from 'https://deno.land/x/jszip/mod.ts'
 import { path } from "./deps.ts";
+import { getSizeDescription } from './src/util/getSizeDescription.ts'
 
 if (import.meta.main) {
     await main()
@@ -94,6 +95,11 @@ type ZipFolderSource = {
     fileEntries?: ZipFileSource[]
     folderEntries?: ZipFolderSource[]
 }
+
+function fileSizeDescription(size: number) {
+    const { size: descr, suffix, } = getSizeDescription(size)
+    return `${descr} ${suffix.toLowerCase()}b`
+}
 async function zipDist({
     zipPath,
     zipSource,
@@ -102,6 +108,12 @@ async function zipDist({
     const zip = new JSZip()
     await addZipEntries(zip, zipSource)
     await zip.writeZip(zipPath)
+    const zipStat = await Deno.stat(zipPath)
+    console.log({ 
+        debug: 'generated zip',
+        zipPath,
+        size: fileSizeDescription(zipStat.size),
+    })
 }
 
 async function addZipEntries(zip: JSZip, zipSource: ZipSource) {
@@ -114,7 +126,7 @@ async function addZipEntries(zip: JSZip, zipSource: ZipSource) {
             debug: 'add file',
             fileName,
             sourceFile,
-            size: sourceContents.byteLength,
+            size: fileSizeDescription(sourceContents.byteLength),
         })
     }
     for (const folderEntry of (zipSource.folderEntries ?? [])) {
