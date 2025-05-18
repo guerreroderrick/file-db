@@ -1,10 +1,15 @@
 import { assert } from 'jsr:@std/assert/assert'
+import { resolvePathWithFallback } from "../util/pathResolution.ts";
 
-const externalHashCommand = ((p: string) => {
-    return p.startsWith('file:///')
-        ? p.slice('file:///'.length)
-        : p
-})(import.meta.resolve('../../go/file-db-go.exe'))
+const externalHashCommand = await (async () => {
+    const relativeToSource = import.meta
+        .resolve('../../go/file-db-go.exe')
+    const hashCommandPath = await resolvePathWithFallback({
+        resolved: relativeToSource,
+        fallbackAppPath: 'go/file-db-go.exe',
+    })
+    return hashCommandPath
+})()
 
 export type ExternalHashParams = {
     fileList: string[]
