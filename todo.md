@@ -1,5 +1,7 @@
 # Todo
 
+- [-] refactor db migrations
+- [ ] Clean archived and vacuum
 - [-] Decide paths to ignore
   - [x] Parse show-tree args
   - [x] Save html with d3
@@ -9,7 +11,7 @@
     - [ ] include child count in graphs
     - [ ] prevent text overwriting in treemap
   - [ ] Open browser to html
-- [ ] refactor db migrations
+- [ ] Only log new path errors
 
 # Done
 
