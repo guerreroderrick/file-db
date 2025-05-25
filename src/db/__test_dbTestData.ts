@@ -21,3 +21,19 @@ delete from [files_Log]
 ; delete from [pathErrors_Log]
 `)
 }
+
+export function addTestData(db: DB, version: number) {
+    if (version < 1) { return }
+    if (version === 1) { 
+        db.execute(`
+            insert into [files_Log] (hostname, path, size, modifyTime, hash, version)
+                values ('testHost', 'testPath', 123, '2023-01-01 00:00:00', 'testHash', 1)
+        `)
+    }
+    if (version === 2) {
+        db.execute(`
+            insert into [pathErrors_Log] (hostname, path, scanTime, error)
+                values ('testHost', 'testPath', '2023-01-01 00:00:00', 'testError')
+        `)
+    }
+}

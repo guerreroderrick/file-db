@@ -37,7 +37,8 @@ function initTable_version(db: DB) {
 create table if not exists [version] (
     id integer primary key
     , description text not null
-    , updatedAt datetime not null
+    , appliedAt datetime not null
+    , script text not null
     )
         `)
 }
@@ -97,6 +98,57 @@ create table if not exists [ignoredFiles_Log] (
 `)
 }
 
+export function applyVersion(db: DB, upToVersion: number) {
+    const versions = getSQLSchemaVersions()
+    if (upToVersion < 0 || upToVersion >= versions.length) {
+        throw new Error(`Invalid version: ${upToVersion}. Must be between 0 and ${versions.length - 1}`)
+    }
+
+    const dbVersion = getDbVersion(db)
+    if ((dbVersion ?? -1) > upToVersion) { return }
+
+    for (let i = (dbVersion ?? -1) + 1; i <= upToVersion; i++) {
+        const { description, script } = versions[i]
+        try {
+            db.execute(script)
+        } catch (e) {
+            throw new Error(`Failed to apply version ${i}: ${description}\nCaused by: ${e}`)
+        }
+
+        if (i < 6) {
+            db.query(`insert into [version] (id, description, updatedAt) values (?, ?, ?)`, [i, versions[i].description, new Date(), ])
+        } else if (i === 6) {
+            for (let j = 0; j < 6; j++) {
+                const { script } = versions[j]
+                db.query(`update [version] set script = ? where id = ?`, [script, j])
+            }
+        } else {
+            db.query(`insert into [version] (id, description, appliedAt, script) values (?, ?, ?, ?)`, [
+                i, versions[i].description, new Date(), versions[i].script,
+            ])
+        }
+    }
+}
+
+function getDbVersion(db: DB, debug?: boolean) {
+    try {
+        const versionRow = db.query<[id: number]>(`
+select max(id) from [version]
+        `)
+        const [id] = versionRow[0]
+        return id
+    } catch (e) {
+        if (debug) {
+            console.debug({
+                debug: 'Failed to get database version',
+                exception: e,
+            })
+        }
+    }
+    return undefined
+}
+
+
 export function getSQLSchemaVersions() {
     const schema = getSQLSchema()
     const versions = schema.matchAll(/\/\* Version:(.*)\*\//ig)
@@ -123,7 +175,7 @@ export function getSQLSchemaVersions() {
 }
 function getSQLSchema() {
     return `
-/* Version: 0. Empty database. Add version table. */
+/* Version: 0. Empty database. Add version table. Superceded in 6. */
     create table if not exists [version] (
         id integer primary key
         , description text not null
@@ -131,8 +183,6 @@ function getSQLSchema() {
         )
 
 /* Version: 1. Initial version. */
-    insert into [version] (id, description, updatedAt)
-        values (0, 'Empty database', 0)
     ; create table if not exists [files_Log] (
         hostname text not null
         , path text not null
@@ -190,8 +240,8 @@ function getSQLSchema() {
         , appliedAt datetime not null
         , script text not null
         )
-    ; insert into [version] (id, description, appliedAt, '-- not saved, requires manual injection')
-        select id, description, updatedAt
+    ; insert into [version] (id, description, appliedAt, script)
+        select id, description, updatedAt, '-- not saved, requires manual injection'
             from [version_migrate]
     ; drop table [version_migrate]
 `

@@ -1,6 +1,7 @@
 import { assertGreater } from "@std/assert/greater"
-import { getSQLSchemaVersions } from "./initSchema.ts"
+import { applyVersion, getSQLSchemaVersions } from "./initSchema.ts"
 import { assertFalse } from "@std/assert/false";
+import { DB } from "../../deps.ts";
 
 Deno.test(function getSSQLSchemaVersions_versionsShouldHaveScript() {
     const scripts = getSQLSchemaVersions()
@@ -10,5 +11,26 @@ Deno.test(function getSSQLSchemaVersions_versionsShouldHaveScript() {
         assertGreater(script.script.length, 0)
         assertFalse(/\/\* Version:/i.test(script.script), `Script should not contain version comment: ${script.script}`)
     }
-    console.log({ scripts })
 })
+
+Deno.test(function applyVersion_succeedsForAnyVersion() {
+    const db = new DB(':memory:')
+
+    const numScripts = getSQLSchemaVersions().length
+    for (let i = 0; i < numScripts; i++) {
+        applyVersion(db, i)
+    }
+})
+
+Deno.test(function applyVersion_applyingPreviousVersionsIsSafe() {
+    const db = new DB(':memory:')
+
+    const numScripts = getSQLSchemaVersions().length
+    for (let i = 0; i < numScripts; i++) {
+        applyVersion(db, i)
+        for (let j = 0; j < i; j++) {
+            applyVersion(db, j)
+        }
+    }
+})
+
