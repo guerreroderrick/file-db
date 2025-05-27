@@ -1,104 +1,11 @@
 import { DB } from "../../deps.ts";
 
-export type DBVersion = {
-    id: bigint
-    description: string
-    updatedAt: Date
-}
-
-const currentVersion: DBVersion = {
-    id: 5n,
-    description: 'Add files_Log.ignoredFileId column',
-    updatedAt: new Date('2025-04-06'),
-}
-
 export function initSchema(db: DB) {
-    initTable_version(db)
-
-    const versionRow = db.query<[id: bigint, description: string, updatedAt: Date]>(`
-select id, description, updatedAt
-    from [version]
-    order by id desc
-    limit 1
-        `)
-    if (versionRow.length === 0) {
-        versionRow.push([0n, 'Empty database', new Date()])
-    }
-    const [id, description, updatedAt] = versionRow[0]
-    const { id: currentId } = currentVersion
-    if (id.toString() === currentId.toString()) { return }
-
-    const version = { id, description, updatedAt }
-    migrateDatabase(db, version)
+    const versions = getSQLSchemaVersions()
+    applyVersion(db, versions.length - 1)
 }
 
-function initTable_version(db: DB) {
-    db.execute(`
-create table if not exists [version] (
-    id integer primary key
-    , description text not null
-    , appliedAt datetime not null
-    , script text not null
-    )
-        `)
-}
-
-function initTable_files_Log(db: DB) {
-    db.execute(`
-create table if not exists [files_Log] (
-    hostname text not null
-    , path text not null
-    , size integer not null
-    , modifyTime datetime not null
-    , hash bytea null
-    , version bigint not null
-    , isArchived bit not null default 0
-    )
-`)
-}
-
-function initTable_files_Log_v2(db: DB) {
-    db.execute(`
-create table if not exists [files_Log] (
-    hostname text not null
-    , path text not null
-    , version bigint not null
-    , isArchived bit not null default 0
-    , size integer not null
-    , hashTime datetime null
-    , modifyTime datetime not null
-    , hash bytea null
-    , ignoredFileId integer null
-    , primary key (hostname, path, version)
-    )
-        `)
-}
-
-function initTable_pathErrors_Log(db: DB) {
-    db.execute(`
-create table if not exists [pathErrors_Log] (
-    hostname text not null
-    , path text not null
-    , scanTime datetime not null
-    , error text not null
-    , primary key (hostname, path, scanTime)
-    )
-        `)
-}
-
-function initTable_ignoredFiles_Log(db: DB) {
-    db.execute(`
-create table if not exists [ignoredFiles_Log] (
-    id integer primary key autoincrement
-    , hostname text not null
-    , path text not null
-    , addedAt datetime not null
-    , unique (hostname, path)
-    )
-`)
-}
-
-export function applyVersion(db: DB, upToVersion: number) {
+export function applyVersion(db: DB, upToVersion: number, debug?: boolean) {
     const versions = getSQLSchemaVersions()
     if (upToVersion < 0 || upToVersion >= versions.length) {
         throw new Error(`Invalid version: ${upToVersion}. Must be between 0 and ${versions.length - 1}`)
@@ -108,25 +15,33 @@ export function applyVersion(db: DB, upToVersion: number) {
     if ((dbVersion ?? -1) > upToVersion) { return }
 
     for (let i = (dbVersion ?? -1) + 1; i <= upToVersion; i++) {
-        const { description, script } = versions[i]
-        try {
-            db.execute(script)
-        } catch (e) {
-            throw new Error(`Failed to apply version ${i}: ${description}\nCaused by: ${e}`)
-        }
-
-        if (i < 6) {
-            db.query(`insert into [version] (id, description, updatedAt) values (?, ?, ?)`, [i, versions[i].description, new Date(), ])
-        } else if (i === 6) {
-            for (let j = 0; j < 6; j++) {
-                const { script } = versions[j]
-                db.query(`update [version] set script = ? where id = ?`, [script, j])
+        db.transaction(() => {
+            const { description, script } = versions[i]
+            if (debug) {
+                console.log(`Applying version ${i}: ${description}\n${script}`)
             }
-        } else {
-            db.query(`insert into [version] (id, description, appliedAt, script) values (?, ?, ?, ?)`, [
-                i, versions[i].description, new Date(), versions[i].script,
-            ])
-        }
+            try {
+                db.execute(script)
+            } catch (e) {
+                throw new Error(`Failed to apply version ${i}: ${description}\nCaused by: ${e}`)
+            }
+
+            if (i < 6) {
+                db.query(`insert into [version] (id, description, updatedAt) values (?, ?, ?)`, [i, versions[i].description, new Date(), ])
+            } else if (i === 6) {
+                for (let j = 0; j < 6; j++) {
+                    const { script } = versions[j]
+                    db.query(`update [version] set script = ? where id = ?`, [script, j])
+                }
+                db.query(`insert into [version] (id, description, appliedAt, script) values (?, ?, ?, ?)`, [
+                    i, versions[i].description, new Date(), versions[i].script,
+                ])
+            } else {
+                db.query(`insert into [version] (id, description, appliedAt, script) values (?, ?, ?, ?)`, [
+                    i, versions[i].description, new Date(), versions[i].script,
+                ])
+            }
+        })
     }
 }
 
@@ -147,7 +62,6 @@ select max(id) from [version]
     }
     return undefined
 }
-
 
 export function getSQLSchemaVersions() {
     const schema = getSQLSchema()
@@ -173,6 +87,7 @@ export function getSQLSchemaVersions() {
     }
     return versionList
 }
+
 function getSQLSchema() {
     return `
 /* Version: 0. Empty database. Add version table. Superceded in 6. */
@@ -246,60 +161,3 @@ function getSQLSchema() {
     ; drop table [version_migrate]
 `
 }
-
-function migrateDatabase(db: DB, sourceVersion: DBVersion) {
-    const { id, description, } = currentVersion
-    const { id: sourceId, description: sourceDescription, updatedAt: sourceUpdatedAt } = sourceVersion
-    console.log({
-        debug: `Migrating database from version ${sourceId} (${sourceDescription}) to version ${id} (${description})`,
-        sourceUpdatedAt,
-    })
-db.transaction(() => {
-    switch (`${sourceId}`) {
-        case '0':
-            db.execute(`
-insert into [version] (id, description, updatedAt)
-    values (0, 'Empty database', 0)
-`)
-            initTable_files_Log(db)
-            /* falls through */
-        case '1':
-            initTable_pathErrors_Log(db)
-            /* falls through */
-        case '2':
-            db.query(`
-alter table [files_Log] rename to [files_Log_migrate]
-            `)
-            initTable_files_Log_v2(db)
-            db.execute(`
-insert into [files_Log] (hostname, path, version, isArchived, size, hashTime, modifyTime, hash)
-    select hostname, path, version, isArchived, size, null, modifyTime, hash
-        from [files_Log_migrate]
-; drop table [files_Log_migrate]
-`)
-            /* falls through */
-        case '3':
-            initTable_ignoredFiles_Log(db)
-            /* falls through */
-        case '4':
-            db.query(`
-alter table [files_Log] rename to [files_Log_migrate]
-            `)
-            initTable_files_Log_v2(db)
-            db.execute(`
-insert into [files_Log] (hostname, path, version, isArchived, size, hashTime, modifyTime, hash)
-    select hostname, path, version, isArchived, size, hashTime, modifyTime, hash
-        from [files_Log_migrate]
-; drop table [files_Log_migrate]
-            `)
-
-            db.query(`
-update [version] set id = ?, description = ?, updatedAt = ?
-                `, [id, description, new Date()])
-            /* falls through */
-        case `${currentVersion.id}`:
-            break;
-        default:
-            throw new Error('Migration not implemented yet')
-    }
-})}

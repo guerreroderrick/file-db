@@ -1,6 +1,5 @@
 # Todo
 
-- [-] refactor db migrations
 - [ ] Clean archived and vacuum
 - [-] Decide paths to ignore
   - [x] Parse show-tree args
@@ -15,6 +14,7 @@
 
 # Done
 
+- [x] 2025-05-27 refactor db migrations
 - [x] 2025-04-27 allow separate db path, merge dbs
 - [x] 2025-04-09 Ignore paths
 - [x] 2025-04-06 Ensure root path matches current case
