@@ -7,7 +7,8 @@ export type RunMainParams = {
     paramSet: 'help'
     helpText: string
 } | (GlobalOptions
-    & (IgnoreParameters
+    & (CleanParameters
+        | IgnoreParameters
         | MergeParameters
         | ShowTreeParameters
         | SyncParameters
@@ -20,6 +21,7 @@ type GlobalOptions = {
 
 function getHelpTextForCommand(command: string): string | undefined {
     switch (command.toLowerCase()) {
+        case 'clean': return getCommandHelp_Clean()
         case 'ignore': return getCommandHelp_Ignore()
         case 'merge': return getCommandHelp_Merge()
         case 'show-tree': return getCommandHelp_ShowTree()
@@ -113,6 +115,8 @@ export function parseArgs(args: readonly string[]): RunMainParams {
         } as T & GlobalOptions
     }
     switch (command) {
+        case 'clean':
+            return addGlobalOptions(parseCommand_Clean(commandArgs))
         case 'ignore':
             return addGlobalOptions(parseCommand_Ignore(commandArgs))
         case 'merge':
@@ -148,6 +152,41 @@ Global Options:
   --db=<path>  Path to the database file. The default is
                    file-db.sqlite3 in the current directory.
 ` }
+
+function getCommandHelp_Clean() { return `
+Usage: file-db clean [--dry-run]
+Remove archive entries and vacuum the database.
+    --dry-run  Log the archived entries but do not remove them.
+               This option does not vacuum.
+` }
+
+type CleanParameters = {
+    paramSet: 'clean'
+    dryRun: boolean
+}
+
+function parseCommand_Clean(args: readonly string[]) {
+    if (args.length > 1) {
+        return {
+            paramSet: 'error',
+            error: `Invalid arguments for clean command: ${args.join(' ')}`,
+            helpText: getHelpTextForCommand('clean')!,
+        } as const
+    }
+    const dryRun = args.includes('--dry-run')
+    if (args.length > 0 && !args.includes('--dry-run')) {
+        return {
+            paramSet: 'error',
+            error: `Invalid argument for clean command: ${args.join(' ')}`,
+            helpText: getHelpTextForCommand('clean')!,
+        } as const
+    }
+    const params: CleanParameters = {
+        paramSet: 'clean',
+        dryRun,
+    }
+    return params
+}
 
 function getCommandHelp_Ignore() { return `
 Usage: file-db ignore add <path>
