@@ -1,6 +1,6 @@
 # Todo
 
-- [ ] Clean archived and vacuum
+- [-] Clean archived and vacuum
 - [-] Decide paths to ignore
   - [x] Parse show-tree args
   - [x] Save html with d3

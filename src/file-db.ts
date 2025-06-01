@@ -4,6 +4,7 @@ import { parseArgs, RunMainParams } from "./args/parseArgs.ts";
 import { performIgnoreAction } from "./commands/performIgnoreAction.ts";
 import { showTree } from "./commands/showTree.ts";
 import { mergeDatabaseFile } from "./commands/mergeDatabaseFile.ts";
+import { cleanDatabase } from "./commands/cleanDatabase.ts";
 
 if (import.meta.main) {
     await main(Deno.args)
@@ -27,6 +28,14 @@ async function runParameterSet(params: RunMainParams) {
         case 'help': {
             const { helpText } = params
             console.log(helpText)
+            return
+        }
+        case 'clean': {
+            const { dbPath, dryRun } = params
+            await cleanDatabase({
+                dbPath,
+                dryRun,
+            })
             return
         }
         case 'ignore action': {

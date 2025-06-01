@@ -3,7 +3,7 @@ type Value<T> = { value: T, error: false }
 type ErrorResult = { error: Error }
 type Result<T> = Value<T> | ErrorResult
 
-export async function tryCatch<T>(fn: () => Promise<T>): Promise<Result<T>>
+export async function tryCatch<T>(fn: () => Promise<T> | T): Promise<Result<T>>
 {
     try {
         return { value: await fn(), error: false }
