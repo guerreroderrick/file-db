@@ -32,6 +32,12 @@ export type TreeMapNode = {
     size?: number
     children?: TreeMapNode[]
 }
+export type TrimmedTreeMapNode = {
+    name: string
+    size?: number
+    children?: TrimmedTreeMapNode[]
+    trimmedLeaves?: number
+}
 function queryData({
     dbPath,
     depth,
@@ -41,19 +47,18 @@ function queryData({
     const db = getDefaultDatabase(dbPath)
     const descendants = getDescendants({
         db,
-        depth,
         hostname,
         path,
     })
-    const tree = pathsToTree(descendants)
+    const tree = pathsToTree(descendants, depth)
     if (tree?.length === 1) {
         return tree[0]
     }
     if (tree === undefined) {
-        const empty: TreeMapNode = { name: '<No results>' }
+        const empty: TrimmedTreeMapNode = { name: '<No results>' }
         return empty
     }
-    const results: TreeMapNode = {
+    const results: TrimmedTreeMapNode = {
         name: 'Results',
         children: tree,
     }
@@ -125,9 +130,10 @@ async function serveHtml({
     await server.finished
 }
 
-function fillTreeMapData(data: TreeMapNode) {
+function fillTreeMapData(data: TrimmedTreeMapNode) {
     const children = data.children?.map(child => fillTreeMapData(child)) ?? []
     const descendantCount = children.length
+        + (data.trimmedLeaves ?? 0)
         + children
             .reduce(
                 (acc, child) =>

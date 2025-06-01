@@ -1,6 +1,7 @@
-import { TreeMapNode } from './showTree.ts'
+import { TreeMapNode, TrimmedTreeMapNode } from './showTree.ts'
 import { FileEntry } from "../db/getDescendants.ts";
 import { assertSnapshot } from "jsr:@std/testing/snapshot";
+import { assertEquals } from "@std/assert/equals";
 
 Deno.test(async function testPathToTree_emptyPathsIsEmpty(snaps) {
     const root = pathsToTree([])
@@ -53,25 +54,53 @@ Deno.test(async function testPathToTree_pathHasSize(snaps) {
     await assertSnapshot(snaps, test)
 })
 
+Deno.test(function testPathToTree_trimDepthTrims() {
+    const test = pathsToTree([
+        { hostname: 'host1', path: 'path1\\path2', size: 100 },
+        { hostname: 'host1', path: 'path1\\path3\\path4\\child', size: 200 },
+    ], 1)
+    const expected = [{
+        name: 'host1\\path1 - trimmed 2 leaves',
+        size: 300,
+        trimmedLeaves: 2,
+    }]
+    assertEquals(test, expected)
+})
+Deno.test(function testPathToTree_trimDepthRecursiveKeepsLess() {
+    const test = pathsToTree([
+        { hostname: 'host1', path: 'path1\\path2', size: 100 },
+        { hostname: 'host1', path: 'path1\\path3\\path4\\child', size: 200 },
+        { hostname: 'host1', path: 'path1\\path3\\path5\\child2', size: 300 },
+    ], 2)
+    const expected = [{
+        name: 'host1\\path1',
+        children: [
+            { name: 'path2', size: 100 },
+            { name: 'path3 - trimmed 2 leaves', size: 500, trimmedLeaves: 2 },
+        ],
+    }]
+    assertEquals(test, expected)
+})
+
 type BuildNode = {
     name: string
     separator: string
     size?: number
     children?: BuildNode[]
 }
-export function pathsToTree(entries: FileEntry[]) {
+export function pathsToTree(entries: FileEntry[], depth: number = 0) {
     function addChild(children: BuildNode[]) {
         return function (node: BuildNode) {
             children.push(node)
             return node
         }
     }
-    const tree: BuildNode[] = []
+    const nodes: BuildNode[] = []
     for (const { hostname, path, size } of entries) {
         const { separator: separator, parts } = splitPath(path)
 
-        let current = tree.find((node) => node.name === hostname)
-            ?? addChild(tree)({
+        let current = nodes.find((node) => node.name === hostname)
+            ?? addChild(nodes)({
                 name: hostname,
                 separator: separator,
             })
@@ -91,7 +120,8 @@ export function pathsToTree(entries: FileEntry[]) {
             current = partRoot
         }
     }
-    return buildNodeToTree(tree)
+    const tree = buildNodeToTree(nodes)
+    return trimTree(tree, depth)
 }
 
 function splitPath(path: string) {
@@ -128,4 +158,69 @@ function buildNodeToTree(tree?: BuildNode[], prefix?: string): TreeMapNode[] | u
         }]
     }
     return result ?? []
+}
+
+function collectLeaves(node: TreeMapNode) {
+    const result: [size: number, count: number] = [node.size ?? 0, node.size !== undefined ? 1 : 0]
+    if ((node.children?.length ?? 0) === 0) {
+        return result
+    }
+    const childLeaves = node.children?.map((child) => collectLeaves(child)) ?? []
+    childLeaves.reduce((acc, [size, count]) => {
+        acc[0] += size
+        acc[1] += count
+        return acc
+    }, result)
+    return result
+}
+
+function trimTree(tree: TreeMapNode[] | undefined, depth: number) {
+    if (depth <= 0) {
+        const trimmedTree: TrimmedTreeMapNode[] | undefined = tree
+        return trimmedTree
+    }
+    if (depth === 1) {
+        return tree?.map((node) => {
+            if ((node.children?.length ?? 0) > 0) {
+                const [leafSize, leafCount] = collectLeaves(node)
+                const trimmed: TrimmedTreeMapNode = {
+                    name: `${node.name} - trimmed ${leafCount} leaves`,
+                    size: (node.size ?? 0) + leafSize,
+                    trimmedLeaves: leafCount,
+                }
+                return trimmed
+            }
+            if (node.children?.length === 0) {
+                const result: TrimmedTreeMapNode = {
+                    name: node.name,
+                    size: node.size,
+                }
+                return result
+            }
+            const result: TrimmedTreeMapNode = node
+            return result
+        })
+    }
+    const trimmed: TrimmedTreeMapNode[] | undefined = tree?.map((node): TrimmedTreeMapNode | undefined => {
+        let trimmedChild: TrimmedTreeMapNode | undefined
+        if (node.children === undefined) {
+            trimmedChild = node
+        } else {
+            const trimmedChildren = trimTree(node.children, depth - 1)
+            trimmedChild = node.size === undefined
+                ? {
+                    name: node.name,
+                    children: trimmedChildren,
+                }
+                : {
+                    name: node.name,
+                    size: node.size,
+                    children: trimmedChildren,
+                }
+        }
+        return trimmedChild
+    })
+        .filter((v): v is TrimmedTreeMapNode => v !== undefined)
+        .flatMap((v) => v)
+    return trimmed
 }

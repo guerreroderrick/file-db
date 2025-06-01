@@ -29,7 +29,6 @@ Deno.test(function testGetDescendants_empty() {
 
     const descendants = getDescendants({
         db: testDb,
-        depth: 0,
         hostname: { isAnyHost: true },
         path: { isAnyPath: true },
     })
@@ -41,7 +40,6 @@ Deno.test(function testGetDescendants_anyGivesAll() {
 
     const descendants = getDescendants({
         db: testDb,
-        depth: 0,
         hostname: { isAnyHost: true },
         path: { isAnyPath: true },
     })
@@ -56,7 +54,6 @@ Deno.test(function testGetDescendants_host1() {
 
     const descendants = getDescendants({
         db: testDb,
-        depth: 0,
         hostname: { isAnyHost: false, host: 'host1' },
         path: { isAnyPath: true },
     })
@@ -70,7 +67,6 @@ Deno.test(function testGetDescendants_path2() {
 
     const descendants = getDescendants({
         db: testDb,
-        depth: 0,
         hostname: { isAnyHost: true },
         path: { isAnyPath: false, prefix: 'path2' },
     })
@@ -97,7 +93,6 @@ Deno.test(function testGetDescendants_path1Prefix() {
 
     const descendants = getDescendants({
         db: testDb,
-        depth: 0,
         hostname: { isAnyHost: true },
         path: { isAnyPath: false, prefix: 'path1' },
     })
@@ -124,7 +119,6 @@ Deno.test(function testGetDescendants_pathWithAnyHost() {
         })
     const descendants = getDescendants({
         db: testDb,
-        depth: 0,
         hostname: { isAnyHost: true },
         path: { isAnyPath: false, prefix: 'path1' },
     })

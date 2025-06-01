@@ -1,7 +1,6 @@
 import { DB } from "../../deps.ts";
 
 type GetDescendantParams = {
-    depth: number
     hostname: { isAnyHost: true } | { isAnyHost: false; host: string }
     path: { isAnyPath: true } | { isAnyPath: false; prefix: string }
     db: DB
@@ -13,7 +12,6 @@ export type FileEntry = {
 }
 export function getDescendants({
     db,
-    // depth,
     hostname,
     path,
 }: GetDescendantParams) {
