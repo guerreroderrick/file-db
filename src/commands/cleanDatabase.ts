@@ -33,17 +33,15 @@ delete
             from [files_Log]
             where isArchived = 1
             order by hashTime desc, modifyTime desc, hostname, path, version, size
-            limit 10 offset ?
+            limit 10000
         )
     returning hostname, path, version, size, hashTime, modifyTime, hash, ignoredFileId
 `
-        let offset= 0
-        let rows = db.query<[hostname: string, path: string, version: bigint, size: number, hashtime: Date, modifyTime: Date, hash: string, ignoreFileId: number][]>(query, [offset])
+        let rows = db.query<[hostname: string, path: string, version: bigint, size: number, hashtime: Date, modifyTime: Date, hash: string, ignoreFileId: number][]>(query)
         console.log('hostname,path,version,size,hashtime,modifyTime,hash,ignoreFileId'.split(',').join('\t'))
         while (rows.length > 0) {
-            offset += rows.length
             console.log(rows.map(r => r.join('\t')).join('\n'))
-            rows = db.query(query, [offset])
+            rows = db.query(query)
         }
         if (dryRun) {
             throw new Error(`Dry run: cancel transaction`)
