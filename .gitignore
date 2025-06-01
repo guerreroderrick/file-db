@@ -1,5 +1,7 @@
 *.sqlite3
+*.sqlite3-journal
 *.exe
+*.log
 
 dist/
 

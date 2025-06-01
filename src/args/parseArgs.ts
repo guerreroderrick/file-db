@@ -189,28 +189,33 @@ function parseCommand_Clean(args: readonly string[]) {
 }
 
 function getCommandHelp_Ignore() { return `
-Usage: file-db ignore add <path>
+Usage: file-db ignore add <path> --hostname=<hostname>
 Add a path to the ignore list. This will mark the path as ignored but not remove any existing entries.
+    --hostname=<hostname>  The hostname to use for the ignore entry. If not specified, the current hostname will be used.
 ` }
 
 type IgnoreParameters = {
     paramSet: 'ignore action'
     action: 'add'
     filePath: string
+    hostname?: string
 }
 function parseCommand_Ignore(args: readonly string[]) {
-    const [action, filePath] = args
-    if (action !== 'add' || filePath === undefined || args.length > 2) {
+    const [action, filePath, hostnamePart] = args
+    const hostnameError = hostnamePart !== undefined && !hostnamePart.startsWith('--hostname=')
+    if (action !== 'add' || filePath === undefined || hostnameError || args.length > 3) {
         return {
             paramSet: 'error',
             error: `Invalid arguments for ignore: ${args.join(' ')}`,
             helpText: getHelpTextForCommand('ignore')!,
         } as const
     }
+    const hostname = hostnamePart?.slice('--hostname='.length)
     const params: IgnoreParameters = {
         paramSet: 'ignore action',
         action,
         filePath,
+        hostname,
     }
     return params
 }

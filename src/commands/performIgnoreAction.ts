@@ -7,11 +7,13 @@ type PerformIgnoreActionParams = {
     dbPath: string
     action: string
     filePath: string
+    hostname?: string
 }
-export function performIgnoreAction({
+export async function performIgnoreAction({
     dbPath,
     action,
     filePath,
+    hostname,
 }: PerformIgnoreActionParams) {
     assert(action === 'add', `Unknown action: ${action}`)
 
@@ -19,12 +21,12 @@ export function performIgnoreAction({
         console.error('File path must be relative')
         return
     }
-    const hostname = Deno.hostname()
+    hostname ??= Deno.hostname()
     const db = getDefaultDatabase(dbPath);
 
     switch (action) {
         case 'add': {
-            addIgnorePath({
+            await addIgnorePath({
                 db,
                 hostname,
                 filePath,

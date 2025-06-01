@@ -98,7 +98,7 @@ select count(*) from pathErrors_Log
     assertEquals(count, 2)
 })
 
-Deno.test(function testMergeDb_ignoredFilesAreMerged() {
+Deno.test(async function testMergeDb_ignoredFilesAreMerged() {
     initAndClearFileTable(testDb)
     {
         using fromDbInstance = testDb2.useDb()
@@ -110,7 +110,7 @@ Deno.test(function testMergeDb_ignoredFilesAreMerged() {
             [fromDb, 'a/b/d'],
         ]
         for (const [db, path] of ignores) {
-            addIgnorePath({
+            await addIgnorePath({
                 db,
                 hostname: 'hostname',
                 filePath: path,
