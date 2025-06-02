@@ -88,7 +88,7 @@
             .text(d => `${rootName(d)}\n${format(d.value)}`)
           node.append('rect')
             .attr('id', d => (d.leafUid = uid('leaf')).id)
-            .attr('fill', d => d === root ? '#fff' : d.children ? '#eee' : color(d.data.name))
+            .attr('fill', d => d === root ? '#fff' : d.children ? color(d.data.name) : '#eee')
             .attr('stroke', '#fff')
           const clipPath = node.append('clipPath')
             .attr('id', d => (d.clipUid = uid('clip')).id)
