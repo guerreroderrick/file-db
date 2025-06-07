@@ -1,15 +1,9 @@
 # Todo
 
 - [-] Clean archived and vacuum
+  - [ ] Show vacuum saved space and only swap if > 0
 - [-] Decide paths to ignore
-  - [x] Parse show-tree args
-  - [x] Save html with d3
-  - [-] Query ignore data
-    - [x] Translate paths to tree node
-    - [x] pull paths from db
-    - [ ] include child count in graphs
-    - [ ] prevent text overwriting in treemap
-  - [ ] Open browser to html
+  - [-] List immediate children below graph
 - [ ] Only log new path errors
 
 # Done
