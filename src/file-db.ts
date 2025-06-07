@@ -56,8 +56,22 @@ async function runParameterSet(params: RunMainParams) {
             })
         }
         case 'show-tree': {
-            const { dbPath, depth, hostname, path, keepAlive } = params
-            return await showTree({ dbPath, depth, hostname, path, keepAlive })
+            const {
+                dbPath,
+                depth,
+                hostname,
+                path,
+                keepAlive,
+                primaryCount,
+            } = params
+            return await showTree({
+                dbPath,
+                depth,
+                hostname,
+                path,
+                keepAlive,
+                primaryCount
+            })
         }
         case 'sync': {
             const { dbPath, filePath } = params

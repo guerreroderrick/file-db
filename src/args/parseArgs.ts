@@ -1,3 +1,4 @@
+import { PrimaryCountOption } from '../commands/showTree.ts'
 
 export type RunMainParams = {
     paramSet: 'error'
@@ -256,6 +257,8 @@ Show a tree-map of the scanned files.
     --hostname=<host>    Show only files on the given host. If not specified, show all hosts.
     --path=<path-prefix> Show only files with the given path prefix.
     --keep-alive         Keep the server alive after showing the tree.
+    --primary-count=size|descendants
+                         Base the tree size on the contained size or on the number of descendants.
 ` }
 
 type ShowTree_HostParameter = {
@@ -276,6 +279,7 @@ type ShowTreeParameters = {
     hostname: ShowTree_HostParameter
     path: ShowTree_PathParameter
     keepAlive: boolean
+    primaryCount: PrimaryCountOption
 }
 function parseCommand_ShowTree(args: readonly string[]) {
     if (args.length > 3) {
@@ -290,9 +294,11 @@ function parseCommand_ShowTree(args: readonly string[]) {
     let hostname: ShowTree_HostParameter = { isAnyHost: true }
     let path: ShowTree_PathParameter = { isAnyPath: true }
     let keepAlive = false
+    let primaryCount: PrimaryCountOption = 'size'
     let isDepthSet = false
     let isHostnameSet = false
     let isPathSet = false
+    let isPrimaryCountSet = false
 
     function error(message: string) {
         return {
@@ -337,6 +343,18 @@ function parseCommand_ShowTree(args: readonly string[]) {
             path = { isAnyPath: false, prefix: pathPrefix }
         } else if (arg === '--keep-alive') {
             keepAlive = true
+        } else if (arg.startsWith('--primary-count=')) {
+            if (isPrimaryCountSet) {
+                return error(`Duplicate primary count argument: ${arg}`)
+            }
+            isPrimaryCountSet = true
+
+            const primaryCountArg = arg.slice('--primary-count='.length)
+            if (primaryCountArg === 'size' || primaryCountArg === 'descendants') {
+                primaryCount = primaryCountArg
+            } else {
+                return error(`Invalid primary count argument: ${arg}`)
+            }
         } else {
             return error(`Invalid argument for show-tree command: ${arg}`)
         }
@@ -347,6 +365,7 @@ function parseCommand_ShowTree(args: readonly string[]) {
         hostname,
         path,
         keepAlive,
+        primaryCount,
     }
     return params
 }

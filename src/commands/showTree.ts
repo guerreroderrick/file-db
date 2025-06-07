@@ -10,16 +10,17 @@ type ShowTreeParams = {
     hostname: { isAnyHost: true } | { isAnyHost: false; host: string; }
     path: { isAnyPath: true } | { isAnyPath: false; prefix: string; }
     keepAlive: boolean
+    primaryCount: PrimaryCountOption
 }
 export async function showTree(args: ShowTreeParams) {
     console.log({
         debug: 'showTree',
         args,
     })
-    const { keepAlive } = args
+    const { keepAlive, primaryCount, } = args
 
     const data= queryData(args)
-    const fullData = fillTreeMapData(data)
+    const fullData = fillTreeMapData(data, primaryCount)
     const html = await renderTreeMap(fullData)
     await serveHtml({
         html,
@@ -68,8 +69,9 @@ function queryData({
 type FullTreeMapNode = {
     name: string
     value?: number
-    children: FullTreeMapNode[]
     descendantCount: number
+    containedSize: number
+    children: FullTreeMapNode[]
 }
 
 const replacementSearch = '<!-- TreeMap data placeholder -->'
@@ -130,22 +132,37 @@ async function serveHtml({
     await server.finished
 }
 
-function fillTreeMapData(data: TrimmedTreeMapNode) {
-    const children = data.children?.map(child => fillTreeMapData(child)) ?? []
-    const descendantCount = children.length
+export type PrimaryCountOption = 'size' | 'descendants'
+function fillTreeMapData(data: TrimmedTreeMapNode, option: PrimaryCountOption) {
+    const children = data.children?.map(child => fillTreeMapData(child, option)) ?? []
+    const descendantCount = children
+        .reduce(
+            (acc, child) =>
+                acc + child.descendantCount
+            , 0)
+        + (data.children?.length ?? 0)
         + (data.trimmedLeaves ?? 0)
-        + children
-            .reduce(
-                (acc, child) =>
-                    acc + child.descendantCount
-                , 0
-            )
+    const containedSize = children
+        .reduce(
+            (acc, child) =>
+                acc + child.containedSize
+            , 0
+        )
+        + (data.size ?? 0)
 
     const filled: FullTreeMapNode = {
         ...data,
-        value: data.size,
         children,
         descendantCount,
+        containedSize,
+        ... (option === 'size'
+            ? {
+                value: data.size,
+            }
+            : {
+                value: data.children?.length ?? 0,
+            }
+        )
     }
     return filled
 }

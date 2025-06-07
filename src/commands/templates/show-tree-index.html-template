@@ -56,13 +56,13 @@
 
         const format = d3.format(",d")
         const rootName = d => d.ancestors().reverse()
-          .map((d, i) => d.data.descendantCount > 1
-            ? `${i === 0 ? '' : ' '}${d.data.name}` + ` (${format(d.data.descendantCount)}) `
+          .map((d, i) => d.data.altCount > 1
+            ? `${i === 0 ? '' : ' '}${d.data.name}` + ` (${format(d.data.altCount)}) `
             : d.data.name
           )
           .join('/')
-        const childName = d => d.data.descendantCount > 1
-          ? d.data.name + ` (${format(d.data.descendantCount)})`
+        const childName = d => d.data.altCount > 1
+          ? d.data.name + ` (${format(d.data.altCount)})`
           : d.data.name
 
         svg
@@ -78,7 +78,7 @@
         function render(group, root) {
           const node = group
             .selectAll('g')
-            .data(root.children.concat(root))
+            .data((root.children ?? []).concat(root))
             .join('g')
 
           node.filter(d => d === root ? d.parent : d.children)
@@ -99,10 +99,21 @@
             .attr('clip-path', d => d.clipUid.href)
             .attr('font-weight', d => d === root ? 'bold' : null)
             .selectAll('tspan')
-            .data(d => (d === root ? rootName(d) : childName(d))
-              .split(/(?=[A-Z][^A-Z])/g)
-              .concat(format(d.value))
-            )
+            .data(d => {
+              if (d === root) {
+                return [`${format(d.value)}: ${rootName(d)}`]
+              }
+              const labels = childName(d)
+                  .split(/(?=[A-Z][^A-Z])/g)
+
+              if (d.data.size !== undefined) {
+                return labels
+                  .concat(`Size: ${format(d.data.size)}`)
+              }
+              return labels
+                .concat(`Contained: ${format(d.data.containedSize)}`)
+                .concat(`Count: ${format(d.data.descendantCount)}`)
+            })
             .join('tspan')
             .attr('x', 3)
             .attr('y', (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`)
