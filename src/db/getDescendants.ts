@@ -20,6 +20,7 @@ export function getDescendants({
 select hostname, path, size
     from [files_Log]
     where 1=1
+        and isArchived = 0
         and (:paramHostname is null or hostname = :paramHostname)
         and (:paramPath is null
             or path = :paramPath
