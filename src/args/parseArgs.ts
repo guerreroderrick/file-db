@@ -282,13 +282,6 @@ type ShowTreeParameters = {
     primaryCount: PrimaryCountOption
 }
 function parseCommand_ShowTree(args: readonly string[]) {
-    if (args.length > 3) {
-        return {
-            paramSet: 'error',
-            error: `Invalid arguments for show-tree command: ${args.join(' ')}`,
-            helpText: getHelpTextForCommand('show-tree')!,
-        } as const
-    }
 
     let depth = 5
     let hostname: ShowTree_HostParameter = { isAnyHost: true }
