@@ -1,5 +1,8 @@
 # Todo
 
+- [ ] Allow ignoring folder name in any path
+  - [ ] Give ignore paths a type
+  - [ ] Add 'folder' type and check during scan but ignore add.
 - [ ] Include directory hashes during scan
   - [-] Merge remote db should update ignores
   - [ ] Batch show-tree query so it can be cancelled for large scans
@@ -8,7 +11,6 @@
   - [ ] Show vacuum saved space and only swap if > 0
 - [-] Decide paths to ignore
   - [x] List immediate children below graph
-  - [ ] Allow ignoring folder name in any path
 - [ ] Only log new path errors
 
 # Done
