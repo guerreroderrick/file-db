@@ -114,6 +114,7 @@ Deno.test(function testMergeDb_ignoredFilesAreMerged() {
                 db,
                 hostname: 'hostname',
                 filePath: path,
+                ignoreType: 'prefix',
             })
         }
     }
@@ -145,6 +146,7 @@ Deno.test(function testMergeDb_remoteIgnoresUpdatePaths() {
             db: fromDb,
             hostname: 'hostname',
             filePath: 'a/b',
+            ignoreType: 'prefix',
         })
     }
     const { ignoredFilesChanges, fileLogNewlyIgnored, } = mergeDb({

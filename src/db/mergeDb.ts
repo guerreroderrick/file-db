@@ -132,6 +132,7 @@ select hostname, path
                 db: toDb,
                 hostname,
                 filePath: path,
+                ignoreType: 'prefix',
             })
             fileLogNewlyIgnored += numIgnored
         }

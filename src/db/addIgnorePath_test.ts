@@ -16,6 +16,7 @@ Deno.test(function testAddIgnorePath() {
         db: testDb,
         hostname: 'test-hostname',
         filePath: 'C:\\some-path',
+        ignoreType: 'prefix',
     })
     assertEquals(numIgnored, 0)
 })
@@ -38,6 +39,7 @@ Deno.test(function testAddIgnorePathArchivesIgnoredFiles() {
         db: testDb,
         hostname: 'test-hostname',
         filePath: 'C:\\some-path',
+        ignoreType: 'prefix',
     })
     assertEquals(numIgnored, 1)
     const [[file]] = testDb.query<[string]>(`select path from [files_Log] where isArchived = 1`)
@@ -63,6 +65,7 @@ Deno.test(function testAddIgnoredPathMultiple() {
         db: testDb,
         hostname: 'test-hostname',
         filePath: 'C:\\some-path',
+        ignoreType: 'prefix',
     })
     assertEquals(numIgnored, 2)
 })

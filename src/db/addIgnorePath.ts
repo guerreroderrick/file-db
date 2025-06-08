@@ -6,6 +6,7 @@ type AddIgnorePathParams = {
     db: DB
     hostname: string
     filePath: string
+    ignoreType: 'prefix'
 }
 export function addIgnorePath({ db, hostname, filePath, }: AddIgnorePathParams) { return db.transaction(() => {
 

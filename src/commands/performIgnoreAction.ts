@@ -30,6 +30,7 @@ export function performIgnoreAction({
                 db,
                 hostname,
                 filePath,
+                ignoreType: 'prefix',
             })
             return
         }
