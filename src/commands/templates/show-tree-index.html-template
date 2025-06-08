@@ -14,6 +14,11 @@
   <h1>📦 File Size Treemap</h1>
   <svg width="800" height="600"></svg>
 
+  <div>
+  Immediate contents:
+  <div id="immediate"></div>
+  </div>
+
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script>
     const svg = d3.select("svg");
@@ -76,6 +81,10 @@
           .call(render, root)
 
         function render(group, root) {
+          const immediate = document.querySelector('#immediate')
+          immediate.innerHTML = `Count: ${root.children?.length}\n<ul>${(root.children ?? []).map(_ => 
+            `<li>${_.data.name}</li>`
+          ).join('\n')}</ul>`
           const node = group
             .selectAll('g')
             .data((root.children ?? []).concat(root))

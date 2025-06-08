@@ -3,7 +3,8 @@
 - [-] Clean archived and vacuum
   - [ ] Show vacuum saved space and only swap if > 0
 - [-] Decide paths to ignore
-  - [-] List immediate children below graph
+  - [x] List immediate children below graph
+  - [ ] Allow ignoring folder name in any path
 - [ ] Only log new path errors
 
 # Done
