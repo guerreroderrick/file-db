@@ -11,6 +11,10 @@ export function mergeDb({
     to: toDb,
 }: MergeDbParams) {
 
+    console.log({
+        debug: 'Attaching database',
+        from: fromDb.filename,
+    })
     toDb.execute(`
 attach database '${fromDb.filename}' as [fromDb]
     `)
@@ -20,10 +24,18 @@ attach database '${fromDb.filename}' as [fromDb]
 select (select id from [fromDb].[version]) [srcVersion]
     , (select id from [version]) [destVersion]
         `)
+        console.log({
+            debug: 'Database versions',
+            srcVersion,
+            destVersion,
+        })
         if (srcVersion !== destVersion) {
             throw new Error(`Database versions do not match: ${srcVersion} != ${destVersion}`)
         }
 
+        console.log({
+            debug: 'Creating staging tables',
+        })
         toDb.execute(`
 create temp table files_Staging as
     select
@@ -60,6 +72,9 @@ create temp table files_Staging as
         where dest.hostname is null
         `)
 
+        console.log({
+            debug: 'Archiving old versions of matched files',
+        })
         toDb.execute(`
 with archivedFiles as (
     select dest.rowid
@@ -73,6 +88,9 @@ with archivedFiles as (
         where rowid in (select rowid from archivedFiles)
         `)
 
+        console.log({
+            debug: 'Inserting new files',
+        })
         toDb.execute(`
 ; insert into files_Log (hostname, path, size, modifyTime, hashTime, hash, version, isArchived)
     select hostname, path, size, modifyTime, hashTime, hash, version, isArchived
@@ -80,6 +98,9 @@ with archivedFiles as (
         `)
         const fileLogChanges= toDb.changes
 
+        console.log({
+            debug: 'Inserting new path errors',
+        })
         toDb.execute(`
 insert into pathErrors_Log (hostname, path, scanTime, error)
     select hostname, path, scanTime, error
@@ -87,6 +108,9 @@ insert into pathErrors_Log (hostname, path, scanTime, error)
         `)
         const pathErrorsChanges = toDb.changes
 
+        console.log({
+            debug: 'Inserting new ignored files',
+        })
         toDb.execute(`
 insert into ignoredFiles_Log (hostname, path, addedAt)
     select hostname, path, addedAt
@@ -99,6 +123,10 @@ insert into ignoredFiles_Log (hostname, path, addedAt)
 select hostname, path
     from ignoredFiles_Staging
 `)
+        console.log({
+            debug: 'Readding staged ignore paths',
+            count: rows.length,
+        })
         for (const [hostname, path] of rows) {
             const { numIgnored } = addIgnorePath({
                 db: toDb,
@@ -108,6 +136,9 @@ select hostname, path
             fileLogNewlyIgnored += numIgnored
         }
 
+        console.log({
+            debug: 'Cleanup staging tables',
+        })
         toDb.execute(`
 drop table if exists files_Staging
 ; drop table if exists pathErrors_Staging
