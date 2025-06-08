@@ -37,7 +37,8 @@ select rowid from [ignoredFiles_Log] where hostname = ? and path = ?
     if (readd) {
         db.query(`
 update [files_Log] set isArchived = 1
-    where ignoredFileId is ?
+    , ignoredFileId = ?
+    where 1=1
         and hostname = ?
         and path like ? || '%'
 `           , [ignoreId, hostname, filePath]
