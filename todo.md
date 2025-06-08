@@ -1,5 +1,7 @@
 # Todo
 
+- [ ] Include directory hashes during scan
+  - [ ] Missing descendents during scan should be marked as archived
 - [-] Clean archived and vacuum
   - [ ] Show vacuum saved space and only swap if > 0
 - [-] Decide paths to ignore
