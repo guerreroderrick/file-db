@@ -1,15 +1,15 @@
 import { assert } from "@std/assert/assert";
 import { DB } from "../../deps.ts";
-import { tryCatch } from "../util/tryCatch.ts";
+import { tryCatchSync } from "../util/tryCatch.ts";
 
 type AddIgnorePathParams = {
     db: DB
     hostname: string
     filePath: string
 }
-export async function addIgnorePath({ db, hostname, filePath, }: AddIgnorePathParams) { return await db.transaction(async () => {
+export function addIgnorePath({ db, hostname, filePath, }: AddIgnorePathParams) { return db.transaction(() => {
 
-    const tryAdd = await tryCatch(() => {
+    const tryAdd = tryCatchSync(() => {
         db.query(`
     insert into [ignoredFiles_Log] (hostname, path, addedAt)
         values (?, ?, ?)

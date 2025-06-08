@@ -40,7 +40,7 @@ async function runParameterSet(params: RunMainParams) {
         }
         case 'ignore action': {
             const { dbPath, action, filePath, hostname, } = params
-            await performIgnoreAction({
+            performIgnoreAction({
                 dbPath,
                 action,
                 filePath,

@@ -10,9 +10,9 @@ const {
     initAndClearFileTable,
 } = dbTestData()
 
-Deno.test(async function testAddIgnorePath() {
+Deno.test(function testAddIgnorePath() {
     initAndClearFileTable(testDb)
-    const { numIgnored } = await addIgnorePath({
+    const { numIgnored } = addIgnorePath({
         db: testDb,
         hostname: 'test-hostname',
         filePath: 'C:\\some-path',
@@ -20,7 +20,7 @@ Deno.test(async function testAddIgnorePath() {
     assertEquals(numIgnored, 0)
 })
 
-Deno.test(async function testAddIgnorePathArchivesIgnoredFiles() {
+Deno.test(function testAddIgnorePathArchivesIgnoredFiles() {
     const fileEntries: FileEntry[] = [
         FileEntryFromArray(["C:\\another-path/parent/test.txt", 123, 456]),
         FileEntryFromArray(["C:\\some-path/parent/test2.txt", 456, 789]),
@@ -34,7 +34,7 @@ Deno.test(async function testAddIgnorePathArchivesIgnoredFiles() {
         })
     }
 
-    const { numIgnored } = await addIgnorePath({
+    const { numIgnored } = addIgnorePath({
         db: testDb,
         hostname: 'test-hostname',
         filePath: 'C:\\some-path',
@@ -45,7 +45,7 @@ Deno.test(async function testAddIgnorePathArchivesIgnoredFiles() {
     assertEquals(file, fileEntries[1].path)
 })
 
-Deno.test(async function testAddIgnoredPathMultiple() {
+Deno.test(function testAddIgnoredPathMultiple() {
     const fileEntries: FileEntry[] = [
         FileEntryFromArray(["C:\\some-path/parent/test.txt", 123, 456]),
         FileEntryFromArray(["C:\\some-path/parent/test2.txt", 456, 789]),
@@ -59,7 +59,7 @@ Deno.test(async function testAddIgnoredPathMultiple() {
         })
     }
 
-    const { numIgnored } = await addIgnorePath({
+    const { numIgnored } = addIgnorePath({
         db: testDb,
         hostname: 'test-hostname',
         filePath: 'C:\\some-path',

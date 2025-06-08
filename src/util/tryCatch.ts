@@ -16,3 +16,16 @@ export async function tryCatch<T>(fn: () => Promise<T> | T): Promise<Result<T>>
         }
     }
 }
+
+export function tryCatchSync<T>(fn: () => T): Result<T> {
+    try {
+        return { value: fn(), error: false }
+    } catch (error) {
+        if (error instanceof Error) { return { error } }
+        return {
+            error: new Error(`Unknown error: ${error}`
+                , { cause: error }
+            )
+        }
+    }
+}

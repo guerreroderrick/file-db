@@ -9,7 +9,7 @@ type PerformIgnoreActionParams = {
     filePath: string
     hostname?: string
 }
-export async function performIgnoreAction({
+export function performIgnoreAction({
     dbPath,
     action,
     filePath,
@@ -26,7 +26,7 @@ export async function performIgnoreAction({
 
     switch (action) {
         case 'add': {
-            await addIgnorePath({
+            addIgnorePath({
                 db,
                 hostname,
                 filePath,
