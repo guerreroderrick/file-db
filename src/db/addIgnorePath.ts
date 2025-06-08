@@ -8,13 +8,18 @@ type AddIgnorePathParams = {
     filePath: string
     ignoreType: 'prefix'
 }
-export function addIgnorePath({ db, hostname, filePath, }: AddIgnorePathParams) { return db.transaction(() => {
+export function addIgnorePath({
+    db,
+    hostname,
+    filePath,
+    ignoreType,
+}: AddIgnorePathParams) { return db.transaction(() => {
 
     const tryAdd = tryCatchSync(() => {
         db.query(`
-    insert into [ignoredFiles_Log] (hostname, path, addedAt)
-        values (?, ?, ?)
-    `   , [ hostname, filePath, new Date()])
+    insert into [ignoredFiles_Log] (ignoreType, hostname, path, addedAt)
+        values (?, ?, ?, ?)
+    `   , [ ignoreType, hostname, filePath, new Date()])
 
         const [[ ignoreId ]] = db.query<[number]>(`select last_insert_rowid()`)
         return ignoreId
@@ -27,7 +32,7 @@ export function addIgnorePath({ db, hostname, filePath, }: AddIgnorePathParams) 
 select rowid from [ignoredFiles_Log] where hostname = ? and path = ?
 `           , [ hostname, filePath ]
         )
-        assert(rowIds.length === 1, `Expected exactly one row for hostname ${hostname} and path ${filePath}, but found ${rowIds.length}`)
+        assert(rowIds.length === 1, `Expected exactly one row for hostname ${hostname} and path ${filePath}, but found ${rowIds.length}. Error was ${tryAdd.error.message}`)
         const [[ rowId ]] = rowIds
         ignoreId = rowId
         readd = true

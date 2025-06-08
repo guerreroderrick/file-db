@@ -159,5 +159,20 @@ function getSQLSchema() {
         select id, description, updatedAt, '-- not saved, requires manual injection'
             from [version_migrate]
     ; drop table [version_migrate]
+
+/* Version: 7. Add type to ignoredFiles_Log. */
+    alter table [ignoredFiles_Log] rename to [ignoredFiles_Log_migrate]
+    ; create table [ignoredFiles_Log] (
+        id integer primary key autoincrement
+        , ignoreType text not null
+        , hostname text not null
+        , path text not null
+        , addedAt datetime not null
+        , unique (ignoreType, hostname, path)
+        )
+    ; insert into [ignoredFiles_Log] (id, ignoreType, hostname, path, addedAt)
+        select id, 'prefix', hostname, path, addedAt
+            from [ignoredFiles_Log_migrate]
+    ; drop table [ignoredFiles_Log_migrate]
 `
 }
