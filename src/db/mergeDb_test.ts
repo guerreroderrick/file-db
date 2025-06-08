@@ -129,6 +129,43 @@ select count(*) from ignoredFiles_Log
     assertEquals(count, 2)
 })
 
+Deno.test(function testMergeDb_remoteIgnoresUpdatePaths() {
+    initAndClearFileTable(testDb)
+    {
+        using fromDbInstance = testDb2.useDb()
+        const fromDb = fromDbInstance.db
+        initAndClearFileTable(fromDb)
+
+        addFileListing({
+            db: testDb,
+            hostname: 'hostname',
+            file: FileEntryFromArray(['a/b/c', 5, 2]),
+        })
+        addIgnorePath({
+            db: fromDb,
+            hostname: 'hostname',
+            filePath: 'a/b',
+        })
+    }
+    const { ignoredFilesChanges, fileLogNewlyIgnored, } = mergeDb({
+        from: testDb2,
+        to: testDb,
+    })
+    const [[isArchived]] = testDb.query<[number]>(`
+select isArchived from files_Log where path = ?
+`, ['a/b/c'])
+
+    assertEquals({
+        isArchived,
+        ignoredFilesChanges,
+        fileLogNewlyIgnored,
+    }, {
+        isArchived: 1,
+        ignoredFilesChanges: 1,
+        fileLogNewlyIgnored: 1,
+    })
+})
+
 Deno.test(function testMergeDb_mergeMultipleVersions() {
     initAndClearFileTable(testDb)
     {

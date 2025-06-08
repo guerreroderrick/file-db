@@ -1,4 +1,5 @@
 import { DB } from "../../deps.ts";
+import { addIgnorePath } from "./addIgnorePath.ts";
 import { DBCheckedFile } from "./dbCheckedFile.ts";
 
 type MergeDbParams = {
@@ -93,6 +94,20 @@ insert into ignoredFiles_Log (hostname, path, addedAt)
         `)
         const ignoredFilesChanges = toDb.changes
 
+        let fileLogNewlyIgnored = 0
+        const rows = toDb.query<[hostname: string, path: string]>(`
+select hostname, path
+    from ignoredFiles_Staging
+`)
+        for (const [hostname, path] of rows) {
+            const { numIgnored } = addIgnorePath({
+                db: toDb,
+                hostname,
+                filePath: path,
+            })
+            fileLogNewlyIgnored += numIgnored
+        }
+
         toDb.execute(`
 drop table if exists files_Staging
 ; drop table if exists pathErrors_Staging
@@ -103,6 +118,7 @@ drop table if exists files_Staging
             fileLogChanges,
             pathErrorsChanges,
             ignoredFilesChanges,
+            fileLogNewlyIgnored,
         }
     }
 
@@ -110,6 +126,7 @@ drop table if exists files_Staging
         fileLogChanges,
         pathErrorsChanges,
         ignoredFilesChanges,
+        fileLogNewlyIgnored,
     } = toDb.transaction(() => sync())
     toDb.execute(`
 detach database [fromDb]
@@ -119,5 +136,6 @@ detach database [fromDb]
         fileLogChanges,
         pathErrorsChanges,
         ignoredFilesChanges,
+        fileLogNewlyIgnored,
     }
 }
