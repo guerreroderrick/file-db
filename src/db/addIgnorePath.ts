@@ -2,11 +2,12 @@ import { assert } from "@std/assert/assert";
 import { DB } from "../../deps.ts";
 import { tryCatchSync } from "../util/tryCatch.ts";
 
+export type IgnoreType = 'prefix'
 type AddIgnorePathParams = {
     db: DB
     hostname: string
     filePath: string
-    ignoreType: 'prefix'
+    ignoreType: IgnoreType
 }
 export function addIgnorePath({
     db,
@@ -40,24 +41,26 @@ select rowid from [ignoredFiles_Log] where hostname = ? and path = ?
         ignoreId = tryAdd.value
     }
 
-    if (readd) {
-        db.query(`
-update [files_Log] set isArchived = 1
-    , ignoredFileId = ?
-    where 1=1
-        and hostname = ?
-        and path like ? || '%'
-`           , [ignoreId, hostname, filePath]
-        )
-    } else {
-        db.query(`
-update [files_Log] set ignoredFileId = ?
-    , isArchived = 1
-    where ignoredFileId is null
-        and hostname = ?
-        and path like ? || '%'
-`           , [ignoreId, hostname, filePath]
-        )
+    if (ignoreType === 'prefix') {
+        if (readd) {
+            db.query(`
+    update [files_Log] set isArchived = 1
+        , ignoredFileId = ?
+        where 1=1
+            and hostname = ?
+            and path like ? || '%'
+    `           , [ignoreId, hostname, filePath]
+            )
+        } else {
+            db.query(`
+    update [files_Log] set ignoredFileId = ?
+        , isArchived = 1
+        where ignoredFileId is null
+            and hostname = ?
+            and path like ? || '%'
+    `           , [ignoreId, hostname, filePath]
+            )
+        }
     }
 
     const [[ numIgnored ]] = db.query<[number]>(`select changes()`)

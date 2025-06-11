@@ -39,10 +39,11 @@ async function runParameterSet(params: RunMainParams) {
             return
         }
         case 'ignore action': {
-            const { dbPath, action, filePath, hostname, } = params
+            const { dbPath, action, ignoreType, filePath, hostname, } = params
             performIgnoreAction({
                 dbPath,
                 action,
+                ignoreType,
                 filePath,
                 hostname,
             })

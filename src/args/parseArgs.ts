@@ -1,4 +1,5 @@
 import { PrimaryCountOption } from '../commands/showTree.ts'
+import { IgnoreType } from "../db/addIgnorePath.ts";
 
 export type RunMainParams = {
     paramSet: 'error'
@@ -198,23 +199,58 @@ Add a path to the ignore list. This will mark the path as ignored but not remove
 type IgnoreParameters = {
     paramSet: 'ignore action'
     action: 'add'
+    ignoreType: IgnoreType
     filePath: string
     hostname?: string
 }
 function parseCommand_Ignore(args: readonly string[]) {
     const [action, filePath, hostnamePart] = args
     const hostnameError = hostnamePart !== undefined && !hostnamePart.startsWith('--hostname=')
-    if (action !== 'add' || filePath === undefined || hostnameError || args.length > 3) {
+    if (action !== 'add' || filePath === undefined || hostnameError) {
         return {
             paramSet: 'error',
             error: `Invalid arguments for ignore: ${args.join(' ')}`,
             helpText: getHelpTextForCommand('ignore')!,
         } as const
     }
+
+    let ignoreType: IgnoreType = 'prefix'
+    let ignoreTypeSet = false
+    for (const remainingArg of args.slice(3)) {
+        if (remainingArg === '--prefix') {
+            if (ignoreTypeSet) {
+                return {
+                    paramSet: 'error',
+                    error: `Duplicate ignore type argument: ${remainingArg}`,
+                    helpText: getHelpTextForCommand('ignore')!,
+                } as const
+            }
+            ignoreType = 'prefix'
+            ignoreTypeSet = true
+        // } else if (remainingArg === '--name') {
+        //     if (ignoreTypeSet) {
+        //         return {
+        //             paramSet: 'error',
+        //             error: `Duplicate ignore type argument: ${remainingArg}`,
+        //             helpText: getHelpTextForCommand('ignore')!,
+        //         } as const
+        //     }
+        //     ignoreType = 'name'
+        //     ignoreTypeSet = true
+        } else {
+            return {
+                paramSet: 'error',
+                error: `Invalid argument for ignore command: ${remainingArg}`,
+                helpText: getHelpTextForCommand('ignore')!,
+            } as const
+        }
+    }
+
     const hostname = hostnamePart?.slice('--hostname='.length)
     const params: IgnoreParameters = {
         paramSet: 'ignore action',
         action,
+        ignoreType,
         filePath,
         hostname,
     }
