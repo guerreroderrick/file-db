@@ -1,8 +1,8 @@
 # Todo
 
 - [ ] Allow ignoring folder name in any path
-  - [ ] Give ignore paths a type
-  - [ ] Add 'folder' type and check during scan but ignore add.
+  - [x] Give ignore paths a type
+  - [ ] Add 'name' type and check during scan but ignore add.
 - [ ] Include directory hashes during scan
   - [-] Merge remote db should update ignores
   - [ ] Batch show-tree query so it can be cancelled for large scans
