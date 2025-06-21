@@ -81,7 +81,7 @@ export async function syncFileDb({
     try {
         return await syncFileDb_withHasher(hasher, dbPath, filePath)
     } finally {
-        hasher[Symbol.asyncDispose]()
+        await hasher[Symbol.asyncDispose]()
     }
 }
 
