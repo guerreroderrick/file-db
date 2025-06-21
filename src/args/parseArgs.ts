@@ -227,16 +227,16 @@ function parseCommand_Ignore(args: readonly string[]) {
             }
             ignoreType = 'prefix'
             ignoreTypeSet = true
-        // } else if (remainingArg === '--name') {
-        //     if (ignoreTypeSet) {
-        //         return {
-        //             paramSet: 'error',
-        //             error: `Duplicate ignore type argument: ${remainingArg}`,
-        //             helpText: getHelpTextForCommand('ignore')!,
-        //         } as const
-        //     }
-        //     ignoreType = 'name'
-        //     ignoreTypeSet = true
+        } else if (remainingArg === '--name') {
+            if (ignoreTypeSet) {
+                return {
+                    paramSet: 'error',
+                    error: `Duplicate ignore type argument: ${remainingArg}`,
+                    helpText: getHelpTextForCommand('ignore')!,
+                } as const
+            }
+            ignoreType = 'name'
+            ignoreTypeSet = true
         } else {
             return {
                 paramSet: 'error',

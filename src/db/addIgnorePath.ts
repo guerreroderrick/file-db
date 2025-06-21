@@ -2,7 +2,7 @@ import { assert } from "@std/assert/assert";
 import { DB } from "../../deps.ts";
 import { tryCatchSync } from "../util/tryCatch.ts";
 
-export type IgnoreType = 'prefix'
+export type IgnoreType = 'prefix' | 'name'
 type AddIgnorePathParams = {
     db: DB
     hostname: string

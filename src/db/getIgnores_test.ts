@@ -11,8 +11,6 @@ export function getIgnores({
     hostname: _h,
     db: _db,
 }: GetIgnoresParams) {
-    const nameFilters: string[] = []
-
     const rows = _db.queryEntries<{ path: string, ignoreType: string, }>(`
 select path, ignoreType
     from [ignoredFiles_Log]
@@ -21,6 +19,9 @@ select path, ignoreType
 
     const prefixFilters = rows
         .filter(row => row.ignoreType === 'prefix')
+        .map(row => row.path)
+    const nameFilters = rows
+        .filter(row => row.ignoreType === 'name')
         .map(row => row.path)
 
     return {
@@ -72,5 +73,34 @@ Deno.test(function getIgnores_returnsPrefixIgnores() {
     assertEquals(ignores, {
         prefixFilters: ignorePaths,
         nameFilters: []
+    })
+})
+
+Deno.test(function getIgnores_returnsNameIgnores() {
+    const ignorePaths = [
+        'ignoredpath',
+        'anotherignoredpath',
+    ]
+
+    initAndClearFileTable(testDb)
+    const testDbData = {
+        hostname: 'test-host',
+        db: testDb,
+        ignoreType: 'name' as IgnoreType,
+    }
+    for (const prefix of ignorePaths) {
+        addIgnorePath({
+            ...testDbData,
+            filePath: prefix,
+        })
+    }
+    
+    const ignores = getIgnores({
+        hostname: 'test-host',
+        db: testDb,
+    })
+    assertEquals(ignores, {
+        prefixFilters: [],
+        nameFilters: ignorePaths,
     })
 })
