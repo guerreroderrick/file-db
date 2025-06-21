@@ -8,15 +8,14 @@ export type GetIgnoresParams = {
     db: DB
 }
 export function getIgnores({
-    hostname: _h,
-    db: _db,
+    hostname,
+    db,
 }: GetIgnoresParams) {
-    const rows = _db.queryEntries<{ path: string, ignoreType: string, }>(`
+    const rows = db.queryEntries<{ path: string, ignoreType: string, }>(`
 select path, ignoreType
     from [ignoredFiles_Log]
-`)
-    console.log({ debug: 'getIgnores', rows, })
-
+    where hostname = ?
+`, [hostname])
     const prefixFilters = rows
         .filter(row => row.ignoreType === 'prefix')
         .map(row => row.path)

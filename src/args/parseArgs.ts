@@ -194,6 +194,8 @@ function getCommandHelp_Ignore() { return `
 Usage: file-db ignore add <path> --hostname=<hostname>
 Add a path to the ignore list. This will mark the path as ignored but not remove any existing entries.
     --hostname=<hostname>  The hostname to use for the ignore entry. If not specified, the current hostname will be used.
+    --prefix               The path is a prefix. This will ignore all files that start with the given path.
+    --name                 The path is a name. This will ignore all files with the given name.
 ` }
 
 type IgnoreParameters = {

@@ -1,6 +1,7 @@
 import { addFileListing } from "../db/addFileListing.ts";
 import { addPathError } from "../db/addPathError.ts";
 import { getDefaultDatabase } from "../db/getDefaultDatabase.ts";
+import { getIgnores } from "../db/getIgnores_test.ts";
 import { updateFileHash } from "../db/updateFileHash.ts";
 import { ExternalHasher } from "../hash/externalHash.ts";
 import { getCurrentPathCase } from "../path/getCurrentPathCase.ts";
@@ -98,7 +99,29 @@ async function syncFileDb_withHasher(hasher: PooledHashUpdate, dbPath: string, f
     if (currentCaseFilePath !== filePath) {
         console.log({ debug: `Path case changed '${currentCaseFilePath}'` })
     }
-    for await (const entry of listFilesIterable(currentCaseFilePath)) {
+    const {
+        prefixFilters: _prefixFilters,
+        nameFilters:  _nameFilters,
+    } = getIgnores({
+        hostname,
+        db,
+    })
+
+    for await (const entry of listFilesIterable({
+        rootPath: currentCaseFilePath,
+        filter: (_path) => {
+            if (_prefixFilters.some(prefix => _path.startsWith(prefix))) {
+                return false
+            }
+
+            const start = Math.max(_path.lastIndexOf('/'), _path.lastIndexOf('\\')) + 1
+            const name = _path.slice(start)
+            if (_nameFilters.some(nameFilter => name === nameFilter)) {
+                return false
+            }
+            return true
+        },
+    })) {
         if (Date.now() - lastOutput > 1000) {
             await Deno.stdout.write(encoder.encode(`\rNumPathErrors: ${numPathErrors}, NumFiles: ${numFiles}...`))
             lastOutput = Date.now()

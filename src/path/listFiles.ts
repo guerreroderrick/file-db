@@ -21,11 +21,20 @@ export function isPathError(entry: ListFileResult): entry is PathError & { isSuc
     return !entry.isSuccess
 }
 
-export async function* listFilesIterable(rootPath: string) {
+export type ListFilesIterableParams = {
+    rootPath: string,
+    filter: (path: string) => boolean,
+}
+export async function* listFilesIterable({
+    rootPath,
+    filter,
+}: ListFilesIterableParams) {
     const paths = [rootPath]
     while (paths.length > 0) {
         const nextPath = paths.shift()!
         const path = getCanonicalPath(nextPath)
+        if (!filter(path)) { continue }
+
         const tryStat = await tryCatch(() => Deno.stat(path))
 
         if (tryStat.error) {

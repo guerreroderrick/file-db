@@ -1,10 +1,5 @@
 # Todo
 
-- [ ] Allow ignoring folder name in any path
-  - [x] Give ignore paths a type
-  - [-] Add 'name' type and check during scan but ignore add.
-    - [x] Add name type
-    - [ ] Check during scan
 - [ ] Include directory hashes during scan
   - [-] Merge remote db should update ignores
   - [ ] Batch show-tree query so it can be cancelled for large scans
@@ -17,6 +12,7 @@
 
 # Done
 
+- [x] 2025-06-21 Allow ignoring folder name in any path
 - [x] 2025-05-27 refactor db migrations
 - [x] 2025-04-27 allow separate db path, merge dbs
 - [x] 2025-04-09 Ignore paths
