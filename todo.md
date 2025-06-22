@@ -1,11 +1,16 @@
 # Todo
 
+- [-] Clean archived and vacuum
+  - [-] Add scanId for pathErrors
+    - [-] Allow test data in schema for migrations
+  - [ ] Remove prior scanIds on clean per hostname and path
+  - [ ] Add scanId for file log
+  - [ ] Archive logs with prior scanIds per hostname and path
+  - [ ] Show vacuum saved space and only swap if > 0
 - [ ] Include directory hashes during scan
   - [-] Merge remote db should update ignores
   - [ ] Batch show-tree query so it can be cancelled for large scans
   - [ ] Missing descendents during scan should be marked as archived
-- [-] Clean archived and vacuum
-  - [ ] Show vacuum saved space and only swap if > 0
 - [-] Decide paths to ignore
   - [x] List immediate children below graph
 - [ ] Only log new path errors

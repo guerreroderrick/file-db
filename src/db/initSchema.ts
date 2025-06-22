@@ -2,10 +2,21 @@ import { DB } from "../../deps.ts";
 
 export function initSchema(db: DB) {
     const versions = getSQLSchemaVersions()
-    applyVersion(db, versions.length - 1)
+    applyVersion({ db, upToVersion: versions.length - 1, })
 }
 
-export function applyVersion(db: DB, upToVersion: number, debug?: boolean) {
+type ApplyVersionParams = {
+    db: DB
+    upToVersion: number
+    debug?: boolean
+    includeTestData?: boolean
+}
+export function applyVersion({
+    db,
+    upToVersion,
+    debug = false,
+    includeTestData = false,
+}: ApplyVersionParams) {
     const versions = getSQLSchemaVersions()
     if (upToVersion < 0 || upToVersion >= versions.length) {
         throw new Error(`Invalid version: ${upToVersion}. Must be between 0 and ${versions.length - 1}`)
@@ -16,7 +27,7 @@ export function applyVersion(db: DB, upToVersion: number, debug?: boolean) {
 
     for (let i = (dbVersion ?? -1) + 1; i <= upToVersion; i++) {
         db.transaction(() => {
-            const { description, script } = versions[i]
+            const { description, script, testDataScript, } = versions[i]
             if (debug) {
                 console.log(`Applying version ${i}: ${description}\n${script}`)
             }
@@ -24,6 +35,14 @@ export function applyVersion(db: DB, upToVersion: number, debug?: boolean) {
                 db.execute(script)
             } catch (e) {
                 throw new Error(`Failed to apply version ${i}: ${description}\nCaused by: ${e}`)
+            }
+            if (includeTestData && debug) {
+                console.log(`Applying testData ${i}: ${testDataScript}`)
+            }
+            try {
+                db.execute(testDataScript)
+            } catch (e) {
+                throw new Error(`Failed to apply testData ${i}: ${description}\nCaused by: ${e}`)
             }
 
             if (i < 6) {
@@ -66,26 +85,40 @@ select max(id) from [version]
 export function getSQLSchemaVersions() {
     const schema = getSQLSchema()
     const versions = schema.matchAll(/\/\* Version:(.*)\*\//ig)
-    const versionList: { description: string, script: string }[] = []
+    const versionList: {
+        description: string,
+        script: string,
+        testDataScript: string,
+    }[] = []
     let prevIndex = 0
     for (const version of versions) {
         const description = version[1].trim()
 
-        if (versionList.length > 0) {
-            const prevScript = schema.substring(prevIndex, version.index).trim()
-            versionList.at(-1)!.script = prevScript
-        }
+        updatePrevScript(versionList, schema, prevIndex, version.index)
         versionList.push({
             description,
             script: '',
+            testDataScript: '',
         })
         prevIndex = version.index + version[0].length
     }
-    if (versionList.length > 0) {
-        const lastScript = schema.substring(prevIndex)
-        versionList.at(-1)!.script = lastScript
-    }
+    updatePrevScript(versionList, schema, prevIndex)
     return versionList
+}
+
+function updatePrevScript(versionList: { description: string; script: string; testDataScript: string; }[], schema: string, prevIndex: number, end?: number) {
+  if (versionList.length > 0) {
+    const prevScript = schema.substring(prevIndex, end).trim();
+
+    const findTestData = prevScript.match(/(?<script>.*)(-- *testData: +(?<comment>[^\r\n]*)\r?\n|\/\* *testData:(?<commentBlock>.*)\*\/)(?<testData>.*)/ims);
+    if (findTestData === null) {
+      versionList.at(-1)!.script = prevScript;
+    } else {
+      const { script, testData } = findTestData.groups!;
+      versionList.at(-1)!.script = script.trim();
+      versionList.at(-1)!.testDataScript = testData.trim();
+    }
+  }
 }
 
 function getSQLSchema() {
@@ -108,6 +141,11 @@ function getSQLSchema() {
         , isArchived bit not null default 0
         )
 
+    -- testData: files in two hosts
+    insert into [files_Log] (hostname, path, size, modifyTime, hash, version, isArchived)
+        values ('host1', '/path/to/file1.txt', 1234, '2023-01-01 12:00:00', x'1234567890abcdef', 1, 0)
+            , ('host2', '/path/to/file2.txt', 5678, '2023-01-02 12:00:00', x'abcdef1234567890', 1, 0)
+
 /* Version: 2. Add path errors. */
     create table if not exists [pathErrors_Log] (
         hostname text not null
@@ -116,6 +154,13 @@ function getSQLSchema() {
         , error text not null
         , primary key (hostname, path, scanTime)
         )
+
+    /* testData:
+    Add some path errors.
+    */
+    insert into [pathErrors_Log] (hostname, path, scanTime, error)
+        values ('host1', '/path/to/file1.txt', '2023-01-01 12:00:00', 'File not found')
+            , ('host2', '/path/to/file2.txt', '2023-01-02 12:00:00', 'Permission denied')
 
 /* Version: 3. Add ignored fileId to files_Log. */
     alter table [files_Log] rename to [files_Log_migrate]
@@ -145,6 +190,10 @@ function getSQLSchema() {
         , unique (hostname, path)
         )
 
+    -- testData: Add some ignored files.
+    insert into [ignoredFiles_Log] (hostname, path, addedAt)
+        values ('host1', '/ignore/path1', '2023-01-01 12:00:00')
+            , ('host2', '/ignore/path2', '2023-01-02 12:00:00')
 /* Version: 5. Removed unnecessary migration. */ -- Removed
 
 /* Version: 6. Rename version.updatedAt to appliedAt. */
