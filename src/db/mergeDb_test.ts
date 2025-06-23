@@ -82,6 +82,7 @@ Deno.test(function testMergeDb_pathErrorsAreMerged() {
             addPathError({
                 db,
                 hostname: 'hostname',
+                scanId: 100,
                 pathError: { path, error: 'error', },
             })
         }

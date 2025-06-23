@@ -223,5 +223,37 @@ function getSQLSchema() {
         select id, 'prefix', hostname, path, addedAt
             from [ignoredFiles_Log_migrate]
     ; drop table [ignoredFiles_Log_migrate]
+
+    -- testData: add prefix and name filters
+    insert into [ignoredFiles_Log] (ignoreType, hostname, path, addedAt)
+        values ('prefix', 'host1', '/ignore/prefix1', '2023-01-01 12:00:00')
+            , ('name', 'host2', 'name-filter', '2023-01-02 12:00:00')
+
+    -- version 8 migrations should succeed with same host same path
+    ; insert into pathErrors_Log (hostname, path, scanTime, error)
+        values ('host1', '/same-path', '2023-01-01 12:00:00', 'Error 1')
+            , ('host1', '/same-path', '2023-01-01 12:00:01', 'Error 1')
+
+/* Version: 8. Add scanId for pathErrors_Log. */
+    alter table [pathErrors_Log] rename to [pathErrors_Log_migrate]
+    ; create table if not exists [pathErrors_Log] (
+        hostname text not null
+        , path text not null
+        , scanId integer bigint not null
+        , scanTime datetime not null
+        , error text not null
+        , primary key (hostname, path, scanId)
+        )
+    ; insert into [pathErrors_Log] (hostname, path, scanId, scanTime, error)
+        select hostname, path
+            , row_number() over (partition by hostname, path order by scanTime)
+            , scanTime, error
+            from [pathErrors_Log_migrate]
+    ; drop table [pathErrors_Log_migrate]
+
+    -- testData: Using valid scanIds
+    insert into [pathErrors_Log] (hostname, path, scanId, scanTime, error)
+        values ('host1', '/path/to/file1.txt', 1000, '2023-01-01 12:00:00', 'File not found')
+            , ('host2', '/path/to/file2.txt', 1001, '2023-01-02 12:00:00', 'Permission denied')
 `
 }

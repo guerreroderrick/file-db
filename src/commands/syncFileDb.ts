@@ -90,6 +90,7 @@ async function syncFileDb_withHasher(hasher: PooledHashUpdate, dbPath: string, f
 
     const hostname = Deno.hostname()
     const db = getDefaultDatabase(dbPath)
+    const scanId = new Date().getTime()
 
     let numPathErrors = 0
     let numFiles = 0
@@ -133,6 +134,7 @@ async function syncFileDb_withHasher(hasher: PooledHashUpdate, dbPath: string, f
             addPathError({
                 db,
                 hostname,
+                scanId,
                 pathError: entry,
             })
             continue
@@ -155,6 +157,7 @@ async function syncFileDb_withHasher(hasher: PooledHashUpdate, dbPath: string, f
                         addPathError({
                             db,
                             hostname,
+                            scanId,
                             pathError: { path: file, error, },
                         })
                         return
