@@ -1,7 +1,9 @@
+import { DB } from "../../deps.ts";
 import { addFileListing } from "../db/addFileListing.ts";
 import { addPathError } from "../db/addPathError.ts";
 import { getDefaultDatabase } from "../db/getDefaultDatabase.ts";
 import { getIgnores } from "../db/getIgnores.ts";
+import { addScanEntry, updateScanEntryEndTime, updateScanEntryHashEndTime } from "../db/scanEntry.ts";
 import { updateFileHash } from "../db/updateFileHash.ts";
 import { ExternalHasher } from "../hash/externalHash.ts";
 import { getCurrentPathCase } from "../path/getCurrentPathCase.ts";
@@ -79,27 +81,45 @@ export async function syncFileDb({
 }: SyncFileDbParams) {
 
     const hasher = new PooledHashUpdate(4)
+    const db = getDefaultDatabase(dbPath)
+    const hostname = Deno.hostname()
+    const currentCaseFilePath = await getCurrentPathCase(filePath)
+    if (currentCaseFilePath !== filePath) {
+        console.log({ debug: `Path case changed '${currentCaseFilePath}'` })
+    }
+
+    const scanId = addScanEntry({
+        db,
+        hostname,
+        path: currentCaseFilePath,
+    })
+
     try {
-        return await syncFileDb_withHasher(hasher, dbPath, filePath)
+        return await syncFileDb_withHasher(hasher, db, hostname, currentCaseFilePath, scanId)
     } finally {
+        updateScanEntryEndTime({
+            db,
+            hostname,
+            path: currentCaseFilePath,
+            scanId,
+        })
+
         await hasher[Symbol.asyncDispose]()
+        updateScanEntryHashEndTime({
+            db,
+            hostname,
+            path: currentCaseFilePath,
+            scanId,
+        })
     }
 }
 
-async function syncFileDb_withHasher(hasher: PooledHashUpdate, dbPath: string, filePath: string) {
-
-    const hostname = Deno.hostname()
-    const db = getDefaultDatabase(dbPath)
-    const scanId = new Date().getTime()
+async function syncFileDb_withHasher(hasher: PooledHashUpdate, db: DB, hostname: string, filePath: string, scanId: number) {
 
     let numPathErrors = 0
     let numFiles = 0
     let lastOutput = Date.now()
     const encoder = new TextEncoder()
-    const currentCaseFilePath = await getCurrentPathCase(filePath)
-    if (currentCaseFilePath !== filePath) {
-        console.log({ debug: `Path case changed '${currentCaseFilePath}'` })
-    }
     const {
         prefixFilters: _prefixFilters,
         nameFilters:  _nameFilters,
@@ -109,7 +129,7 @@ async function syncFileDb_withHasher(hasher: PooledHashUpdate, dbPath: string, f
     })
 
     for await (const entry of listFilesIterable({
-        rootPath: currentCaseFilePath,
+        rootPath: filePath,
         filter: (_path) => {
             if (_prefixFilters.some(prefix => _path.startsWith(prefix))) {
                 return false

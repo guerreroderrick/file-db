@@ -19,6 +19,7 @@ function initAndClearFileTable(db: DB) {
 delete from [files_Log]
 ; delete from [ignoredFiles_Log]
 ; delete from [pathErrors_Log]
+; delete from [scanEntry_Log]
 `)
 }
 

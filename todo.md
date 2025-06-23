@@ -1,8 +1,8 @@
 # Todo
 
 - [-] Clean archived and vacuum
-  - [-] Add scanId for pathErrors
-    - [-] Allow test data in schema for migrations
+  - [x] Add scanId for pathErrors
+  - [x] Record scan entries to know which are previous
   - [ ] Remove prior scanIds on clean per hostname and path
   - [ ] Add scanId for file log
   - [ ] Archive logs with prior scanIds per hostname and path

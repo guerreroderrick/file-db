@@ -255,5 +255,21 @@ function getSQLSchema() {
     insert into [pathErrors_Log] (hostname, path, scanId, scanTime, error)
         values ('host1', '/path/to/file1.txt', 1000, '2023-01-01 12:00:00', 'File not found')
             , ('host2', '/path/to/file2.txt', 1001, '2023-01-02 12:00:00', 'Permission denied')
+
+/* Version: 9. Add scanEntry_Log table. */
+    create table if not exists [scanEntry_Log] (
+        hostname text not null
+        , scanId bigint not null
+        , path text not null
+        , startTime datetime not null
+        , scanEndTime datetime null
+        , hashEndTime datetime null
+        , unique (hostname, scanId, path)
+        )
+
+    -- testData: Add some scan entries.
+    insert into [scanEntry_Log] (hostname, scanId, path, startTime, scanEndTime, hashEndTime)
+        values ('host1', 1000, '/path/to/file1.txt', '2023-01-01 12:00:00', '2023-01-01 12:00:10', '2023-01-01 12:00:15')
+            , ('host2', 1000, '/path/to/file2.txt', '2023-01-01 12:00:00', null, null)
 `
 }
