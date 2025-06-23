@@ -1,7 +1,7 @@
 import { addFileListing } from "../db/addFileListing.ts";
 import { addPathError } from "../db/addPathError.ts";
 import { getDefaultDatabase } from "../db/getDefaultDatabase.ts";
-import { getIgnores } from "../db/getIgnores_test.ts";
+import { getIgnores } from "../db/getIgnores.ts";
 import { updateFileHash } from "../db/updateFileHash.ts";
 import { ExternalHasher } from "../hash/externalHash.ts";
 import { getCurrentPathCase } from "../path/getCurrentPathCase.ts";
