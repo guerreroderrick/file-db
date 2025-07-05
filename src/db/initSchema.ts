@@ -36,13 +36,15 @@ export function applyVersion({
             } catch (e) {
                 throw new Error(`Failed to apply version ${i}: ${description}\nCaused by: ${e}`)
             }
-            if (includeTestData && debug) {
+            if (includeTestData) {
+                if (debug) {
                 console.log(`Applying testData ${i}: ${testDataScript}`)
-            }
-            try {
-                db.execute(testDataScript)
-            } catch (e) {
-                throw new Error(`Failed to apply testData ${i}: ${description}\nCaused by: ${e}`)
+                }
+                try {
+                    db.execute(testDataScript)
+                } catch (e) {
+                    throw new Error(`Failed to apply testData ${i}: ${description}\nCaused by: ${e}`)
+                }
             }
 
             if (i < 6) {
@@ -143,6 +145,8 @@ function getSQLSchema() {
 
     -- testData: files in two hosts
     insert into [files_Log] (hostname, path, size, modifyTime, hash, version, isArchived)
+        values ('test-data-bad-host-1', '/path/to/file1.txt', 1234, '2023-01-01 12:00:00', x'1234567890abcdef', 1, 0)
+    ; insert into [files_Log] (hostname, path, size, modifyTime, hash, version, isArchived)
         values ('host1', '/path/to/file1.txt', 1234, '2023-01-01 12:00:00', x'1234567890abcdef', 1, 0)
             , ('host2', '/path/to/file2.txt', 5678, '2023-01-02 12:00:00', x'abcdef1234567890', 1, 0)
 
@@ -158,7 +162,9 @@ function getSQLSchema() {
     /* testData:
     Add some path errors.
     */
-    insert into [pathErrors_Log] (hostname, path, scanTime, error)
+    insert into [files_Log] (hostname, path, size, modifyTime, hash, version, isArchived)
+        values ('test-data-bad-host-2', '/path/to/file1.txt', 1234, '2023-01-01 12:00:00', x'1234567890abcdef', 1, 0)
+    ; insert into [pathErrors_Log] (hostname, path, scanTime, error)
         values ('host1', '/path/to/file1.txt', '2023-01-01 12:00:00', 'File not found')
             , ('host2', '/path/to/file2.txt', '2023-01-02 12:00:00', 'Permission denied')
 

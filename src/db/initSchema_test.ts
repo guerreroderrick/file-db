@@ -3,6 +3,7 @@ import { applyVersion, getSQLSchemaVersions } from "./initSchema.ts"
 import { assertFalse } from "@std/assert/false";
 import { DB } from "../../deps.ts";
 import { assert } from "@std/assert/assert";
+import { assertEquals } from "@std/assert/equals";
 
 Deno.test(function getSSQLSchemaVersions_versionsShouldHaveScript() {
     const scripts = getSQLSchemaVersions()
@@ -21,6 +22,22 @@ Deno.test(function getSQLSchemaVersions_scriptShouldNotHaveTestData() {
         assertFalse(script.includes('testData:'), `Should not contain testData: magic string: ${script}`)
     }
 })
+
+Deno.test(function applyVersion_withoutTests_shouldNotContainTestData() {
+    const db = new DB(':memory:')
+    const scripts = getSQLSchemaVersions()
+
+    applyVersion({
+        db,
+        upToVersion: scripts.length - 1,
+        includeTestData: false,
+    })
+    const hostnames = db.query<[hostname: string]>(`
+select distinct hostname from [files_Log] where hostname like 'test-data-bad-host%'`
+)
+    assertEquals(hostnames.length, 0, `Expected no test data to be present, but found: ${hostnames}`)
+})
+
 Deno.test(function getSQLSchemaVersions_mayContainTestData() {
     const scripts = getSQLSchemaVersions()
 
