@@ -18,7 +18,7 @@ Deno.test(function testHelpArgs() {
 
 Deno.test(function testHelpArgsWithCommand() {
     const cases: [string, string][] = [
-        [ '-h', 'ignore'],
+        [ '--help', 'ignore'],
         [ 'help', 'show-tree'],
         [ '--help', 'sync'],
     ]
@@ -110,7 +110,7 @@ Deno.test(function testSyncArgsWithNoArgs() {
 
 Deno.test(function testAddIgnorePath() {
     const args = parseArgs(['ignore', 'add', 'filePath'])
-    assert(args.paramSet === 'ignore action')
+    assert(args.paramSet === 'ignore action', `Expected 'ignore action' but got '${args.paramSet}' in ${JSON.stringify(args)}`)
     assertEquals(args.action, 'add')
     assertEquals(args.filePath, 'filePath')
 })
@@ -118,6 +118,6 @@ Deno.test(function testAddIgnorePath() {
 Deno.test(function testAddIgnorePathError() {
     const args = parseArgs(['ignore', 'error'])
     assert(args.paramSet === 'error')
-    assertStringIncludes(args.error, 'Invalid arguments for ignore')
-    assert(args.helpText !== undefined)
+    assertStringIncludes(args.error, 'Invalid parameters for ignore')
+    assert(args.helpText !== undefined, `helpText should be defined in ${JSON.stringify(args)}`)
 })

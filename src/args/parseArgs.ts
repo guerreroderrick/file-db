@@ -32,7 +32,6 @@ type GlobalOptions = {
 
 function getHelpTextForCommand(command: string): string | undefined {
     switch (command.toLowerCase()) {
-        case 'ignore': return getCommandHelp_Ignore()
         case 'merge': return getCommandHelp_Merge()
         case 'show-tree': return getCommandHelp_ShowTree()
         case 'sync': return getCommandHelp_Sync()
@@ -50,9 +49,10 @@ type Option = {
 
 type Command<T> = {
     command: string
+    example: string
     description: string
     options: Option[]
-    action: (options: Record<string, string[] | undefined>) => T
+    action: (parameters: string[], options: Record<string, string[] | undefined>) => T
 }
 
 class CommandLine<ResultType = ErrorSet> {
@@ -80,14 +80,15 @@ class CommandLine<ResultType = ErrorSet> {
             const commandHelp = this.commands
                 .map(_ => `  ${_.command}\t${_.description}`)
                 .join('\n')
-            return `${prefix}${globalOptionsExample} <command> [options]\n${globalOptionsHelp}\nCommands:\n${commandHelp}`
+            return `${prefix}${globalOptionsExample} <command> [params...] [options]\n${globalOptionsHelp}\nCommands:\n${commandHelp}`
         }
         const commandOptionsExample = command.options
             .map(_ => `[${_.example}]`)
             .join(' ')
         const commandOptionsHelp = command.options
             .map(_ => `  --${_.key}\t${_.description} (default: ${_.default ?? 'undefined'})`)
-        return `${globalOptionsExample} ${command.command} ${commandOptionsExample}\nCommand options:\n${commandOptionsHelp}`
+            .join('\n')
+        return `${globalOptionsExample} ${command.command} ${command.example}${commandOptionsExample}\nCommand options:\n${commandOptionsHelp}`
     }
 
     globalOption<Key extends string>(
@@ -107,7 +108,8 @@ class CommandLine<ResultType = ErrorSet> {
         return this as unknown as CommandLine<ResultType | AddResultType>
     }
 
-    parse(args: readonly string[]): undefined | ResultType {
+    parse(args: readonly string[], configureGlobals: (globals: Record<string, string[] | undefined>) => GlobalOptions): undefined | ResultType {
+        const parameters: string[] = []
         const argOptions: Record<string, string[] | undefined> = {}
         const optionSet = [...this.globalOptions]
 
@@ -146,11 +148,7 @@ class CommandLine<ResultType = ErrorSet> {
             } else if (currentOption !== undefined) {
                 argOptions[currentOption.key]!.push(arg)
             } else {
-                return ({
-                    paramSet: 'error',
-                    error: `Unexpected arg ${arg} without any option for command ${foundCommand.command}`,
-                    helpText: this.getHelpText(foundCommand?.command),
-                }) as ResultType
+                parameters.push(arg)
             }
         }
         if (argOptions['help'] !== undefined) {
@@ -170,8 +168,20 @@ class CommandLine<ResultType = ErrorSet> {
         for (const o of optionSet) {
             argOptions[o.key] ??= o.default
         }
-        const result = foundCommand.action(argOptions);
-        return result
+        try {
+            const result = foundCommand.action(parameters, argOptions);
+            const globals = configureGlobals(argOptions)
+            return {
+                ...globals,
+                ...result,
+            }
+        } catch (e) {
+            return {
+                paramSet: 'error',
+                error: `Error processing command ${foundCommand.command}: ${e}`,
+                helpText: this.getHelpText(foundCommand.command),
+            } as ResultType
+        }
     }
 }
 
@@ -199,20 +209,69 @@ export function parseArgs(args: readonly string[]): RunMainParams {
             default: [DEFAULT_DB_PATH],
         })
         .command({
-            command: 'clean',
+            command: 'clean', example: '',
             description: 'Remove archive entries and vacuum the database. This option does not vacuum',
             options: [{
                 key: 'dry-run', example: '--dry-run',
                 description: 'Log the archived entries but do not remove them.',
                 default: undefined,
             }],
-            action: args => ({
-                paramSet: 'clean' as const,
-                dryRun: checkFlag(args['dry-run']),
-                dbPath: checkString(args['db-path']),
-            }) as CleanParameters & GlobalOptions,
+            action: (params, args) => {
+                if (params.length > 0) {
+                    return {
+                        paramSet: 'error' as const,
+                        error: `Unexpected parameters for clean command: ${params.join(' ')}`,
+                        helpText: getHelpTextForCommand('clean')!,
+                    }
+                }
+                const result: CleanParameters = {
+                    paramSet: 'clean' as const,
+                    dryRun: checkFlag(args['dry-run']),
+                }
+                return result
+            },
         })
-    const result = commandLine.parse(args)
+        .command({
+            command: 'ignore',
+            example: 'add (--name|--prefix) <path> [--hostname=<hostname>]',
+            description: 'Add a path to the ignore list. This will mark the path as ignored but not remove any existing entries.',
+            options: [{
+                key: 'hostname', example: '--hostname <hostname>',
+                description: 'The hostname to use for the ignore entry. If not specified, the current hostname will be used.',
+                default: undefined,
+            }, {
+                key: 'prefix', example: '--prefix',
+                description: 'The path is a prefix. This will ignore all files that start with the given path.',
+                default: undefined,
+            }, {
+                key: 'name', example: '--name',
+                description: 'The path is a name. This will ignore all files with the given name.',
+                default: undefined,
+            }],
+            action: (params, args) => {
+                const [action, filePath, extra] = params
+                if (action !== 'add' || filePath === undefined || extra !== undefined) {
+                    throw `Invalid parameters for ignore command: ${params.join(' ')}`
+                }
+                const name = checkFlag(args['name'])
+                const prefix = checkFlag(args['prefix'])
+                if (name && prefix) {
+                    throw `Cannot specify both --name and --prefix`
+                }
+                const result: IgnoreParameters = {
+                    paramSet: 'ignore action',
+                    action: 'add' as const,
+                    ignoreType: name ? 'name' : 'prefix',
+                    filePath: filePath!,
+                }
+                return result
+            },
+        })
+    const result = commandLine
+        .parse(args, globals => ({
+            dbPath: checkString(globals['db-path'])!,
+        })
+        )
 
     if (result !== undefined) {
         const validated = result as RunMainParams
@@ -306,8 +365,6 @@ export function parseArgs(args: readonly string[]): RunMainParams {
         } as T & GlobalOptions
     }
     switch (command) {
-        case 'ignore':
-            return addGlobalOptions(parseCommand_Ignore(commandArgs))
         case 'merge':
             return addGlobalOptions(parseCommand_Merge(commandArgs))
         case 'show-tree':
@@ -347,73 +404,12 @@ type CleanParameters = {
     dryRun: boolean
 }
 
-function getCommandHelp_Ignore() { return `
-Usage: file-db ignore add <path> --hostname=<hostname>
-Add a path to the ignore list. This will mark the path as ignored but not remove any existing entries.
-    --hostname=<hostname>  The hostname to use for the ignore entry. If not specified, the current hostname will be used.
-    --prefix               The path is a prefix. This will ignore all files that start with the given path.
-    --name                 The path is a name. This will ignore all files with the given name.
-` }
-
 type IgnoreParameters = {
     paramSet: 'ignore action'
     action: 'add'
     ignoreType: IgnoreType
     filePath: string
     hostname?: string
-}
-function parseCommand_Ignore(args: readonly string[]) {
-    const [action, filePath, hostnamePart] = args
-    const hostnameError = hostnamePart !== undefined && !hostnamePart.startsWith('--hostname=')
-    if (action !== 'add' || filePath === undefined || hostnameError) {
-        return {
-            paramSet: 'error',
-            error: `Invalid arguments for ignore: ${args.join(' ')}`,
-            helpText: getHelpTextForCommand('ignore')!,
-        } as const
-    }
-
-    let ignoreType: IgnoreType = 'prefix'
-    let ignoreTypeSet = false
-    for (const remainingArg of args.slice(3)) {
-        if (remainingArg === '--prefix') {
-            if (ignoreTypeSet) {
-                return {
-                    paramSet: 'error',
-                    error: `Duplicate ignore type argument: ${remainingArg}`,
-                    helpText: getHelpTextForCommand('ignore')!,
-                } as const
-            }
-            ignoreType = 'prefix'
-            ignoreTypeSet = true
-        } else if (remainingArg === '--name') {
-            if (ignoreTypeSet) {
-                return {
-                    paramSet: 'error',
-                    error: `Duplicate ignore type argument: ${remainingArg}`,
-                    helpText: getHelpTextForCommand('ignore')!,
-                } as const
-            }
-            ignoreType = 'name'
-            ignoreTypeSet = true
-        } else {
-            return {
-                paramSet: 'error',
-                error: `Invalid argument for ignore command: ${remainingArg}`,
-                helpText: getHelpTextForCommand('ignore')!,
-            } as const
-        }
-    }
-
-    const hostname = hostnamePart?.slice('--hostname='.length)
-    const params: IgnoreParameters = {
-        paramSet: 'ignore action',
-        action,
-        ignoreType,
-        filePath,
-        hostname,
-    }
-    return params
 }
 
 function getCommandHelp_Merge() { return `
