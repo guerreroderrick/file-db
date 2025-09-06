@@ -1,6 +1,6 @@
-import { assert } from "@std/assert/assert";
 import { PrimaryCountOption } from '../commands/showTree.ts'
 import { IgnoreType } from "../db/addIgnorePath.ts";
+import { checkFlag, checkString, Command, CommandLine, ErrorSet, HelpSet } from "./commandLine.ts";
 
 export const DEFAULT_DB_PATH = 'file-db.sqlite3'
 
@@ -16,15 +16,6 @@ export type RunMainParams =
         )
     )
 
-export type HelpSet = {
-    paramSet: 'help'
-    helpText: string
-}
-export type ErrorSet = {
-    paramSet: 'error'
-    error: string
-    helpText: string
-}
 
 type GlobalOptions = {
     dbPath: string
@@ -40,171 +31,7 @@ function getHelpTextForCommand(command: string): string | undefined {
     }
 }
 
-type Option = {
-    key: string
-    example: string
-    description: string
-    default: string[] | undefined
-}
-
-type Command<T> = {
-    command: string
-    example: string
-    description: string
-    options: Option[]
-    action: (parameters: string[], options: Record<string, string[] | undefined>) => T
-}
-
-class CommandLine<GlobalOptions, ResultType = ErrorSet> {
-    globalOptions: Option[] = [{
-        key: 'help',
-        default: undefined,
-        example: '--help',
-        description: 'Describe the available options',
-    }]
-    commands: Command<ResultType>[] = []
-    private configureGlobals: (globals: Record<string, string[] | undefined>) => GlobalOptions
-
-    constructor(
-        optoins: Option[],
-        configureGlobals: (globals: Record<string, string[] | undefined>) => GlobalOptions
-    ) {
-        for (const option of optoins) {
-            assert(!this.globalOptions.some(_ => _.key === option.key), `Option ${option.key} already added`)
-            this.globalOptions.push(option)
-        }
-        this.configureGlobals = configureGlobals
-    }
-
-    getHelpText(commandName: string | undefined) {
-        const command = this.commands.find(_ => _.command === commandName)
-        const globalOptionsExample = this.globalOptions
-            .map(_ => `[${_.example}]`)
-            .join(' ')
-        const globalOptionsHelp = this.globalOptions
-            .map(_ => `  --${_.key}\t${_.description} (default: ${_.default ?? 'undefined'})`)
-            .join('\n')
-        if (command === undefined) {
-            let prefix = ''
-            if (commandName !== undefined) {
-                prefix = `Command ${commandName} is not known\n`
-            }
-            const commandHelp = this.commands
-                .map(_ => `  ${_.command}\t${_.description}`)
-                .join('\n')
-            return `${prefix}${globalOptionsExample} <command> [params...] [options]\n${globalOptionsHelp}\nCommands:\n${commandHelp}`
-        }
-        const commandOptionsExample = command.options
-            .map(_ => `[${_.example}]`)
-            .join(' ')
-        const commandOptionsHelp = command.options
-            .map(_ => `  --${_.key}\t${_.description} (default: ${_.default ?? 'undefined'})`)
-            .join('\n')
-        return `${globalOptionsExample} ${command.command} ${command.example}${commandOptionsExample}\nCommand options:\n${commandOptionsHelp}`
-    }
-
-    command<AddResultType>(
-        command: Command<AddResultType>
-    ): CommandLine<ResultType | (AddResultType & GlobalOptions)>
-    {
-        assert(!this.commands.some(_ => _.command === command.command), `Command ${command.command} already added`)
-        ; (this.commands as unknown as Command<ResultType | AddResultType>[]).push(command)
-        return this as unknown as CommandLine<ResultType | (AddResultType & GlobalOptions)>
-    }
-
-    parse(args: readonly string[]): undefined | ResultType {
-        const parameters: string[] = []
-        const argOptions: Record<string, string[] | undefined> = {}
-        const optionSet = [...this.globalOptions]
-
-        let currentOption: Option | undefined
-        let foundCommand: Command<ResultType> | undefined
-        for (const arg of args) {
-            if (arg.startsWith('--')) {
-                const key = arg.substring(2)
-                const option = optionSet.find(o => o.key === key)
-                if (option === undefined) {
-                    return ({
-                        paramSet: 'error',
-                        error: `Option ${arg} not recognized.`,
-                        helpText: this.getHelpText(foundCommand?.command),
-                    }) as ResultType
-                }
-                currentOption = option
-                argOptions[currentOption.key] ??= []
-            } else if (foundCommand === undefined) {
-                if (currentOption !== undefined) {
-                    argOptions[currentOption.key] ??= []
-                    argOptions[currentOption.key]!.push(arg)
-                    currentOption = undefined
-                    continue
-                }
-                const command = this.commands.find(c => c.command === arg)
-                if (command === undefined) {
-                    return ({
-                        paramSet: 'error',
-                        error: `Command ${arg} not recognized`,
-                        helpText: this.getHelpText(undefined),
-                    }) as ResultType
-                }
-                foundCommand = command
-                optionSet.push(...foundCommand.options)
-            } else if (currentOption !== undefined) {
-                argOptions[currentOption.key]!.push(arg)
-            } else {
-                parameters.push(arg)
-            }
-        }
-        if (argOptions['help'] !== undefined) {
-            const helpCommand = argOptions['help'][0]
-            return ({
-                paramSet: 'help',
-                helpText: this.getHelpText(foundCommand?.command ?? helpCommand),
-            }) as ResultType
-        }
-        if (foundCommand === undefined) {
-            return ({
-                paramSet: 'error',
-                error: `No command found in ${args}`,
-                helpText: this.getHelpText(undefined),
-            }) as ResultType
-        }
-        for (const o of optionSet) {
-            argOptions[o.key] ??= o.default
-        }
-        try {
-            const result = foundCommand.action(parameters, argOptions);
-            const globals = this.configureGlobals(argOptions)
-            return {
-                ...globals,
-                ...result,
-            }
-        } catch (e) {
-            return {
-                paramSet: 'error',
-                error: `Error processing command ${foundCommand.command}: ${e}`,
-                helpText: this.getHelpText(foundCommand.command),
-            } as ResultType
-        }
-    }
-}
-
-function checkFlag(args: string[] | undefined) {
-    if (args === undefined) { return false }
-    if (args.length === 0) { return true }
-    assert(false, `Unexpected arguments for flag: ${args}`)
-}
-function checkString(args: string[] | undefined) {
-    if (args === undefined) { return undefined }
-    if (args.length === 1) { return args[0] }
-    if (args.length === 0) {
-        assert(false, `Missing argument for option`)
-    }
-    assert(false, `Too many arguments for option: ${args}`)
-}
-
 export function parseArgs(args: readonly string[]): RunMainParams {
-
     const commandLine = new CommandLine([{
             key: 'db-path',
             example: '--db-path <filepath>',
@@ -213,65 +40,8 @@ export function parseArgs(args: readonly string[]): RunMainParams {
         }], globals => ({
             dbPath: checkString(globals['db-path'])!,
         }))
-        .command({
-            command: 'clean', example: '',
-            description: 'Remove archive entries and vacuum the database. This option does not vacuum',
-            options: [{
-                key: 'dry-run', example: '--dry-run',
-                description: 'Log the archived entries but do not remove them.',
-                default: undefined,
-            }],
-            action: (params, args) => {
-                if (params.length > 0) {
-                    return {
-                        paramSet: 'error' as const,
-                        error: `Unexpected parameters for clean command: ${params.join(' ')}`,
-                        helpText: getHelpTextForCommand('clean')!,
-                    }
-                }
-                const result: CleanParameters = {
-                    paramSet: 'clean' as const,
-                    dryRun: checkFlag(args['dry-run']),
-                }
-                return result
-            },
-        })
-        .command({
-            command: 'ignore',
-            example: 'add (--name|--prefix) <path> [--hostname=<hostname>]',
-            description: 'Add a path to the ignore list. This will mark the path as ignored but not remove any existing entries.',
-            options: [{
-                key: 'hostname', example: '--hostname <hostname>',
-                description: 'The hostname to use for the ignore entry. If not specified, the current hostname will be used.',
-                default: undefined,
-            }, {
-                key: 'prefix', example: '--prefix',
-                description: 'The path is a prefix. This will ignore all files that start with the given path.',
-                default: undefined,
-            }, {
-                key: 'name', example: '--name',
-                description: 'The path is a name. This will ignore all files with the given name.',
-                default: undefined,
-            }],
-            action: (params, args) => {
-                const [action, filePath, extra] = params
-                if (action !== 'add' || filePath === undefined || extra !== undefined) {
-                    throw `Invalid parameters for ignore command: ${params.join(' ')}`
-                }
-                const name = checkFlag(args['name'])
-                const prefix = checkFlag(args['prefix'])
-                if (name && prefix) {
-                    throw `Cannot specify both --name and --prefix`
-                }
-                const result: IgnoreParameters = {
-                    paramSet: 'ignore action',
-                    action: 'add' as const,
-                    ignoreType: name ? 'name' : 'prefix',
-                    filePath: filePath!,
-                }
-                return result
-            },
-        })
+        .command(cleanCommand)
+        .command(ignoreCommand)
     const result = commandLine
         .parse(args)
 
@@ -405,6 +175,25 @@ type CleanParameters = {
     paramSet: 'clean'
     dryRun: boolean
 }
+const cleanCommand: Command<CleanParameters> = {
+    command: 'clean', example: '',
+    description: 'Remove archive entries and vacuum the database. This option does not vacuum',
+    options: [{
+        key: 'dry-run', example: '--dry-run',
+        description: 'Log the archived entries but do not remove them.',
+        default: undefined,
+    }],
+    action: (params, args) => {
+        if (params.length > 0) {
+            throw `Unexpected parameters for clean command: ${params.join(' ')}`
+        }
+        const result: CleanParameters = {
+            paramSet: 'clean' as const,
+            dryRun: checkFlag(args['dry-run']),
+        }
+        return result
+    },
+}
 
 type IgnoreParameters = {
     paramSet: 'ignore action'
@@ -412,6 +201,42 @@ type IgnoreParameters = {
     ignoreType: IgnoreType
     filePath: string
     hostname?: string
+}
+const ignoreCommand: Command<IgnoreParameters> = {
+    command: 'ignore',
+    example: 'add (--name|--prefix) <path> [--hostname=<hostname>]',
+    description: 'Add a path to the ignore list. This will mark the path as ignored but not remove any existing entries.',
+    options: [{
+        key: 'hostname', example: '--hostname <hostname>',
+        description: 'The hostname to use for the ignore entry. If not specified, the current hostname will be used.',
+        default: undefined,
+    }, {
+        key: 'prefix', example: '--prefix',
+        description: 'The path is a prefix. This will ignore all files that start with the given path.',
+        default: undefined,
+    }, {
+        key: 'name', example: '--name',
+        description: 'The path is a name. This will ignore all files with the given name.',
+        default: undefined,
+    }],
+    action: (params, args) => {
+        const [action, filePath, extra] = params
+        if (action !== 'add' || filePath === undefined || extra !== undefined) {
+            throw `Invalid parameters for ignore command: ${params.join(' ')}`
+        }
+        const name = checkFlag(args['name'])
+        const prefix = checkFlag(args['prefix'])
+        if (name && prefix) {
+            throw `Cannot specify both --name and --prefix`
+        }
+        const result: IgnoreParameters = {
+            paramSet: 'ignore action',
+            action: 'add' as const,
+            ignoreType: name ? 'name' : 'prefix',
+            filePath: filePath!,
+        }
+        return result
+    },
 }
 
 function getCommandHelp_Merge() { return `
