@@ -1,7 +1,8 @@
 import { assertEquals } from 'jsr:@std/assert/equals'
-import { parseArgs } from './parseArgs.ts'
+import { DEFAULT_DB_PATH, parseArgs } from './parseArgs.ts'
 import { assert } from 'jsr:@std/assert/assert'
 import { assertStringIncludes } from 'jsr:@std/assert/string-includes'
+import { assertSnapshot } from "jsr:@std/testing/snapshot";
 
 Deno.test(function testEmptyArgs() {
     const args = parseArgs([])
@@ -24,13 +25,38 @@ Deno.test(function testHelpArgsWithCommand() {
     for (const [arg, command] of cases) {
         const args = parseArgs([arg, command])
         assert(args.paramSet === 'help', `paramSet should be 'help' for ${arg} ${command}`)
-        assertStringIncludes(args.helpText, `${command}`)
+        assertStringIncludes(args.helpText, `${command}`, `For params ${[arg, command]}`)
     }
 })
 
 Deno.test(function testHelpArgsWithUnknownCommand() {
     const args = parseArgs(['help', 'unknown'])
     assert(args.paramSet === 'error')
+})
+
+Deno.test(function parseArgs_whenClean_parsesCorrectly() {
+    const cases: [argSet: string[], paramSet: { dryRun: boolean, dbPath: string }][] = [
+        [['clean'], { dryRun: false, dbPath: DEFAULT_DB_PATH, }],
+        [['clean', '--dry-run'], { dryRun: true, dbPath: DEFAULT_DB_PATH, }],
+        [['clean', '--db-path', 'test'], { dryRun: false, dbPath: 'test', }],
+        [['clean', '--dry-run', '--db-path', 'test'], { dryRun: true, dbPath: 'test', }],
+        [['clean', '--db-path', 'test', '--dry-run'], { dryRun: true, dbPath: 'test', }],
+    ]
+    for (const [argSet, paramSet] of cases) {
+        const result = parseArgs(argSet)
+        assert(result.paramSet === 'clean', `'${result.paramSet}' !== 'clean' for argSet: '${argSet}'`)
+        assertEquals(result.dryRun, paramSet.dryRun)
+        assertEquals(result.dbPath, paramSet.dbPath)
+    }
+})
+
+Deno.test(async function parseArgs_whenCleanError_parsesError(snapshot) {
+    const args = parseArgs(['clean', '--dryrun'])
+    assert(args.paramSet === 'error')
+    assert(args.error !== undefined)
+    assert(args.helpText !== undefined)
+    assert(`${args.error} ${args.helpText}`, 'clean')
+    await assertSnapshot(snapshot, args)
 })
 
 Deno.test(function testShowTreeAny() {

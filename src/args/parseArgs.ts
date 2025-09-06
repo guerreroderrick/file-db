@@ -1,21 +1,30 @@
+import { assert } from "@std/assert/assert";
 import { PrimaryCountOption } from '../commands/showTree.ts'
 import { IgnoreType } from "../db/addIgnorePath.ts";
 
-export type RunMainParams = {
+export const DEFAULT_DB_PATH = 'file-db.sqlite3'
+
+export type RunMainParams = 
+    ErrorSet
+    | HelpSet
+    | (GlobalOptions
+        & (CleanParameters
+            | IgnoreParameters
+            | MergeParameters
+            | ShowTreeParameters
+            | SyncParameters
+        )
+    )
+
+export type HelpSet = {
+    paramSet: 'help'
+    helpText: string
+}
+export type ErrorSet = {
     paramSet: 'error'
     error: string
     helpText: string
-} | {
-    paramSet: 'help'
-    helpText: string
-} | (GlobalOptions
-    & (CleanParameters
-        | IgnoreParameters
-        | MergeParameters
-        | ShowTreeParameters
-        | SyncParameters
-    )
-)
+}
 
 type GlobalOptions = {
     dbPath: string
@@ -23,7 +32,6 @@ type GlobalOptions = {
 
 function getHelpTextForCommand(command: string): string | undefined {
     switch (command.toLowerCase()) {
-        case 'clean': return getCommandHelp_Clean()
         case 'ignore': return getCommandHelp_Ignore()
         case 'merge': return getCommandHelp_Merge()
         case 'show-tree': return getCommandHelp_ShowTree()
@@ -33,7 +41,188 @@ function getHelpTextForCommand(command: string): string | undefined {
     }
 }
 
+type Option = {
+    key: string
+    example: string
+    description: string
+    default: string[] | undefined
+}
+
+type Command<T> = {
+    command: string
+    description: string
+    options: Option[]
+    action: (options: Record<string, string[] | undefined>) => T
+}
+
+class CommandLine<ResultType = ErrorSet> {
+    globalOptions: Option[] = [{
+        key: 'help',
+        default: undefined,
+        example: '--help',
+        description: 'Describe the available options',
+    }]
+    commands: Command<ResultType>[] = []
+
+    getHelpText(commandName: string | undefined) {
+        const command = this.commands.find(_ => _.command === commandName)
+        const globalOptionsExample = this.globalOptions
+            .map(_ => `[${_.example}]`)
+            .join(' ')
+        const globalOptionsHelp = this.globalOptions
+            .map(_ => `  --${_.key}\t${_.description} (default: ${_.default ?? 'undefined'})`)
+            .join('\n')
+        if (command === undefined) {
+            let prefix = ''
+            if (commandName !== undefined) {
+                prefix = `Command ${commandName} is not known\n`
+            }
+            const commandHelp = this.commands
+                .map(_ => `  ${_.command}\t${_.description}`)
+                .join('\n')
+            return `${prefix}${globalOptionsExample} <command> [options]\n${globalOptionsHelp}\nCommands:\n${commandHelp}`
+        }
+        const commandOptionsExample = command.options
+            .map(_ => `[${_.example}]`)
+            .join(' ')
+        const commandOptionsHelp = command.options
+            .map(_ => `  --${_.key}\t${_.description} (default: ${_.default ?? 'undefined'})`)
+        return `${globalOptionsExample} ${command.command} ${commandOptionsExample}\nCommand options:\n${commandOptionsHelp}`
+    }
+
+    globalOption<Key extends string>(
+        option: Option
+    ): CommandLine<ResultType>
+    {
+        assert(!this.globalOptions.some(_ => _.key === option.key), `Option ${option.key} already added`)
+        this.globalOptions.push(option)
+        return this
+    }
+    command<AddResultType>(
+        command: Command<AddResultType>
+    ): CommandLine<ResultType | AddResultType>
+    {
+        assert(!this.commands.some(_ => _.command === command.command), `Command ${command.command} already added`)
+        ; (this.commands as unknown as Command<ResultType | AddResultType>[]).push(command)
+        return this as unknown as CommandLine<ResultType | AddResultType>
+    }
+
+    parse(args: readonly string[]): undefined | ResultType {
+        const argOptions: Record<string, string[] | undefined> = {}
+        const optionSet = [...this.globalOptions]
+
+        let currentOption: Option | undefined
+        let foundCommand: Command<ResultType> | undefined
+        for (const arg of args) {
+            if (arg.startsWith('--')) {
+                const key = arg.substring(2)
+                const option = optionSet.find(o => o.key === key)
+                if (option === undefined) {
+                    return ({
+                        paramSet: 'error',
+                        error: `Option ${arg} not recognized.`,
+                        helpText: this.getHelpText(foundCommand?.command),
+                    }) as ResultType
+                }
+                currentOption = option
+                argOptions[currentOption.key] ??= []
+            } else if (foundCommand === undefined) {
+                if (currentOption !== undefined) {
+                    argOptions[currentOption.key] ??= []
+                    argOptions[currentOption.key]!.push(arg)
+                    currentOption = undefined
+                    continue
+                }
+                const command = this.commands.find(c => c.command === arg)
+                if (command === undefined) {
+                    return ({
+                        paramSet: 'error',
+                        error: `Command ${arg} not recognized`,
+                        helpText: this.getHelpText(undefined),
+                    }) as ResultType
+                }
+                foundCommand = command
+                optionSet.push(...foundCommand.options)
+            } else if (currentOption !== undefined) {
+                argOptions[currentOption.key]!.push(arg)
+            } else {
+                return ({
+                    paramSet: 'error',
+                    error: `Unexpected arg ${arg} without any option for command ${foundCommand.command}`,
+                    helpText: this.getHelpText(foundCommand?.command),
+                }) as ResultType
+            }
+        }
+        if (argOptions['help'] !== undefined) {
+            const helpCommand = argOptions['help'][0]
+            return ({
+                paramSet: 'help',
+                helpText: this.getHelpText(foundCommand?.command ?? helpCommand),
+            }) as ResultType
+        }
+        if (foundCommand === undefined) {
+            return ({
+                paramSet: 'error',
+                error: `No command found in ${args}`,
+                helpText: this.getHelpText(undefined),
+            }) as ResultType
+        }
+        for (const o of optionSet) {
+            argOptions[o.key] ??= o.default
+        }
+        const result = foundCommand.action(argOptions);
+        return result
+    }
+}
+
+function checkFlag(args: string[] | undefined) {
+    if (args === undefined) { return false }
+    if (args.length === 0) { return true }
+    assert(false, `Unexpected arguments for flag: ${args}`)
+}
+function checkString(args: string[] | undefined) {
+    if (args === undefined) { return undefined }
+    if (args.length === 1) { return args[0] }
+    if (args.length === 0) {
+        assert(false, `Missing argument for option`)
+    }
+    assert(false, `Too many arguments for option: ${args}`)
+}
+
 export function parseArgs(args: readonly string[]): RunMainParams {
+
+    const commandLine = new CommandLine()
+        .globalOption({
+            key: 'db-path',
+            example: '--db-path <filepath>',
+            description: 'the path of the database',
+            default: [DEFAULT_DB_PATH],
+        })
+        .command({
+            command: 'clean',
+            description: 'Remove archive entries and vacuum the database. This option does not vacuum',
+            options: [{
+                key: 'dry-run', example: '--dry-run',
+                description: 'Log the archived entries but do not remove them.',
+                default: undefined,
+            }],
+            action: args => ({
+                paramSet: 'clean' as const,
+                dryRun: checkFlag(args['dry-run']),
+                dbPath: checkString(args['db-path']),
+            }) as CleanParameters & GlobalOptions,
+        })
+    const result = commandLine.parse(args)
+
+    if (result !== undefined) {
+        const validated = result as RunMainParams
+        if (validated.paramSet !== 'error'
+            || !validated.error.match(/Command [^ ]+ not recognized/)
+        ) {
+            return validated
+        }
+    }
+
     const helpText = getCommandHelp()
     const helpArgIndex = args.findIndex(arg => ['help', '--help', '-h'].includes(arg.toLowerCase()))
     if (helpArgIndex !== -1) {
@@ -117,8 +306,6 @@ export function parseArgs(args: readonly string[]): RunMainParams {
         } as T & GlobalOptions
     }
     switch (command) {
-        case 'clean':
-            return addGlobalOptions(parseCommand_Clean(commandArgs))
         case 'ignore':
             return addGlobalOptions(parseCommand_Ignore(commandArgs))
         case 'merge':
@@ -155,39 +342,9 @@ Global Options:
                    file-db.sqlite3 in the current directory.
 ` }
 
-function getCommandHelp_Clean() { return `
-Usage: file-db clean [--dry-run]
-Remove archive entries and vacuum the database.
-    --dry-run  Log the archived entries but do not remove them.
-               This option does not vacuum.
-` }
-
 type CleanParameters = {
     paramSet: 'clean'
     dryRun: boolean
-}
-
-function parseCommand_Clean(args: readonly string[]) {
-    if (args.length > 1) {
-        return {
-            paramSet: 'error',
-            error: `Invalid arguments for clean command: ${args.join(' ')}`,
-            helpText: getHelpTextForCommand('clean')!,
-        } as const
-    }
-    const dryRun = args.includes('--dry-run')
-    if (args.length > 0 && !args.includes('--dry-run')) {
-        return {
-            paramSet: 'error',
-            error: `Invalid argument for clean command: ${args.join(' ')}`,
-            helpText: getHelpTextForCommand('clean')!,
-        } as const
-    }
-    const params: CleanParameters = {
-        paramSet: 'clean',
-        dryRun,
-    }
-    return params
 }
 
 function getCommandHelp_Ignore() { return `

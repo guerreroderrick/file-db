@@ -1,0 +1,11 @@
+export const snapshot = {};
+
+snapshot[`parseArgs_whenCleanError_parsesError 1`] = `
+{
+  error: "Option --dryrun not recognized.",
+  helpText: "[--help] [--db-path <filepath>] clean [--dry-run]
+Command options:
+  --dry-run	Log the archived entries but do not remove them. (default: undefined)",
+  paramSet: "error",
+}
+`;
