@@ -23,7 +23,6 @@ type GlobalOptions = {
 
 function getHelpTextForCommand(command: string): string | undefined {
     switch (command.toLowerCase()) {
-        case 'merge': return getCommandHelp_Merge()
         case 'show-tree': return getCommandHelp_ShowTree()
         case 'sync': return getCommandHelp_Sync()
         default:
@@ -42,6 +41,7 @@ export function parseArgs(args: readonly string[]): RunMainParams {
         }))
         .command(cleanCommand)
         .command(ignoreCommand)
+        .command(mergeCommand)
     const result = commandLine
         .parse(args)
 
@@ -137,8 +137,6 @@ export function parseArgs(args: readonly string[]): RunMainParams {
         } as T & GlobalOptions
     }
     switch (command) {
-        case 'merge':
-            return addGlobalOptions(parseCommand_Merge(commandArgs))
         case 'show-tree':
             return addGlobalOptions(parseCommand_ShowTree(commandArgs))
         case 'sync':
@@ -239,32 +237,29 @@ const ignoreCommand: Command<IgnoreParameters> = {
     },
 }
 
-function getCommandHelp_Merge() { return `
-Usage: file-db merge <remote-db-path>
-Merge the database file with the local database. Conflicting files
-    will reserve the latest information, trusting the timestamps
-    within the database.
-` }
-
 type MergeParameters = {
     paramSet: 'merge'
     remoteDbPath: string
 }
 
-function parseCommand_Merge(args: readonly string[]) {
-    const [remoteDbPath] = args
-    if (remoteDbPath === undefined || args.length > 1) {
-        return {
-            paramSet: 'error',
-            error: `Invalid arguments for merge command: ${args.join(' ')}`,
-            helpText: getHelpTextForCommand('merge')!,
-        } as const
-    }
-    const params: MergeParameters = {
-        paramSet: 'merge',
-        remoteDbPath,
-    }
-    return params
+const mergeCommand: Command<MergeParameters> = {
+    command: 'merge',
+    example: '<remote-db-path>',
+    description: `Merge the database file with the local database. Conflicting files
+    will reserve the latest information, trusting the timestamps
+    within the database.`,
+    options: [],
+    action: (params) => {
+        if (params.length !== 1) {
+            throw `Invalid parameters for merge command: ${params.join(' ')}`
+        }
+        const [remoteDbPath] = params
+        const result: MergeParameters = {
+            paramSet: 'merge',
+            remoteDbPath,
+        }
+        return result
+    },
 }
 
 function getCommandHelp_ShowTree() { return `
