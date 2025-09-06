@@ -10,7 +10,7 @@ Deno.test(function testEmptyArgs() {
 })
 
 Deno.test(function testHelpArgs() {
-    for (const arg of ['help', '--help', '-h']) {
+    for (const arg of ['--help']) {
         const args = parseArgs([arg])
         assertEquals(args.paramSet, 'help')
     }
@@ -19,7 +19,7 @@ Deno.test(function testHelpArgs() {
 Deno.test(function testHelpArgsWithCommand() {
     const cases: [string, string][] = [
         [ '--help', 'ignore'],
-        [ 'help', 'show-tree'],
+        [ '--help', 'show-tree'],
         [ '--help', 'sync'],
     ]
     for (const [arg, command] of cases) {

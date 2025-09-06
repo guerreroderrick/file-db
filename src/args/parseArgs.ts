@@ -55,7 +55,7 @@ export function parseArgs(args: readonly string[]): RunMainParams {
     }
 
     const helpText = getCommandHelp()
-    const helpArgIndex = args.findIndex(arg => ['help', '--help', '-h'].includes(arg.toLowerCase()))
+    const helpArgIndex = args.findIndex(arg => [''].includes(arg.toLowerCase()))
     if (helpArgIndex !== -1) {
         const helpArgs = args.toSpliced(helpArgIndex, 1)
         if (helpArgs.length === 0) {
