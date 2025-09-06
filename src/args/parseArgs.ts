@@ -55,7 +55,7 @@ type Command<T> = {
     action: (parameters: string[], options: Record<string, string[] | undefined>) => T
 }
 
-class CommandLine<ResultType = ErrorSet> {
+class CommandLine<GlobalOptions, ResultType = ErrorSet> {
     globalOptions: Option[] = [{
         key: 'help',
         default: undefined,
@@ -63,6 +63,18 @@ class CommandLine<ResultType = ErrorSet> {
         description: 'Describe the available options',
     }]
     commands: Command<ResultType>[] = []
+    private configureGlobals: (globals: Record<string, string[] | undefined>) => GlobalOptions
+
+    constructor(
+        optoins: Option[],
+        configureGlobals: (globals: Record<string, string[] | undefined>) => GlobalOptions
+    ) {
+        for (const option of optoins) {
+            assert(!this.globalOptions.some(_ => _.key === option.key), `Option ${option.key} already added`)
+            this.globalOptions.push(option)
+        }
+        this.configureGlobals = configureGlobals
+    }
 
     getHelpText(commandName: string | undefined) {
         const command = this.commands.find(_ => _.command === commandName)
@@ -91,24 +103,16 @@ class CommandLine<ResultType = ErrorSet> {
         return `${globalOptionsExample} ${command.command} ${command.example}${commandOptionsExample}\nCommand options:\n${commandOptionsHelp}`
     }
 
-    globalOption<Key extends string>(
-        option: Option
-    ): CommandLine<ResultType>
-    {
-        assert(!this.globalOptions.some(_ => _.key === option.key), `Option ${option.key} already added`)
-        this.globalOptions.push(option)
-        return this
-    }
     command<AddResultType>(
         command: Command<AddResultType>
-    ): CommandLine<ResultType | AddResultType>
+    ): CommandLine<ResultType | (AddResultType & GlobalOptions)>
     {
         assert(!this.commands.some(_ => _.command === command.command), `Command ${command.command} already added`)
         ; (this.commands as unknown as Command<ResultType | AddResultType>[]).push(command)
-        return this as unknown as CommandLine<ResultType | AddResultType>
+        return this as unknown as CommandLine<ResultType | (AddResultType & GlobalOptions)>
     }
 
-    parse(args: readonly string[], configureGlobals: (globals: Record<string, string[] | undefined>) => GlobalOptions): undefined | ResultType {
+    parse(args: readonly string[]): undefined | ResultType {
         const parameters: string[] = []
         const argOptions: Record<string, string[] | undefined> = {}
         const optionSet = [...this.globalOptions]
@@ -170,7 +174,7 @@ class CommandLine<ResultType = ErrorSet> {
         }
         try {
             const result = foundCommand.action(parameters, argOptions);
-            const globals = configureGlobals(argOptions)
+            const globals = this.configureGlobals(argOptions)
             return {
                 ...globals,
                 ...result,
@@ -201,13 +205,14 @@ function checkString(args: string[] | undefined) {
 
 export function parseArgs(args: readonly string[]): RunMainParams {
 
-    const commandLine = new CommandLine()
-        .globalOption({
+    const commandLine = new CommandLine([{
             key: 'db-path',
             example: '--db-path <filepath>',
             description: 'the path of the database',
             default: [DEFAULT_DB_PATH],
-        })
+        }], globals => ({
+            dbPath: checkString(globals['db-path'])!,
+        }))
         .command({
             command: 'clean', example: '',
             description: 'Remove archive entries and vacuum the database. This option does not vacuum',
@@ -268,10 +273,7 @@ export function parseArgs(args: readonly string[]): RunMainParams {
             },
         })
     const result = commandLine
-        .parse(args, globals => ({
-            dbPath: checkString(globals['db-path'])!,
-        })
-        )
+        .parse(args)
 
     if (result !== undefined) {
         const validated = result as RunMainParams
