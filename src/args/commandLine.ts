@@ -79,13 +79,23 @@ export class CommandLine<GlobalOptions, ResultType = ErrorSet | HelpSet> {
                 .join('\n')
             return `${prefix}${globalOptionsExample} <command> [params...] [options]\n${globalOptionsHelp}\nCommands:\n${commandHelp}`
         }
-        const commandOptionsExample = command.options
-            .map(_ => `[${_.example}]`)
+        const commandOptionsExamples = command.options
+            .map(_ => _.example)
+            .filter(_ => _ !== '')
+            .map(_ => `[${_}]`)
+        if (command.example !== '') {
+            commandOptionsExamples.unshift(command.example)
+        }
+        const commandOptionsExample = commandOptionsExamples
             .join(' ')
-        const commandOptionsHelp = command.options
+        const commandOptions = command.options
             .map(_ => `  --${_.key}\t${_.description} (default: ${_.default ?? 'undefined'})`)
+        if (commandOptions.length !== 0) {
+            commandOptions.unshift('Command options:')
+        }
+        const commandOptionsHelp = commandOptions
             .join('\n')
-        return `${globalOptionsExample} ${command.command} ${command.example}${commandOptionsExample}\nCommand options:\n${commandOptionsHelp}`
+        return `${globalOptionsExample} ${command.command} ${commandOptionsExample}\n${commandOptionsHelp}`
     }
 
     command<AddResultType>(

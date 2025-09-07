@@ -202,18 +202,18 @@ type IgnoreParameters = {
 }
 const ignoreCommand: Command<IgnoreParameters> = {
     command: 'ignore',
-    example: 'add (--name|--prefix) <path> [--hostname=<hostname>]',
+    example: 'add',
     description: 'Add a path to the ignore list. This will mark the path as ignored but not remove any existing entries.',
     options: [{
         key: 'hostname', example: '--hostname <hostname>',
         description: 'The hostname to use for the ignore entry. If not specified, the current hostname will be used.',
         default: undefined,
     }, {
-        key: 'prefix', example: '--prefix',
+        key: 'prefix', example: '--prefix|--name',
         description: 'The path is a prefix. This will ignore all files that start with the given path.',
         default: undefined,
     }, {
-        key: 'name', example: '--name',
+        key: 'name', example: '',
         description: 'The path is a name. This will ignore all files with the given name.',
         default: undefined,
     }],
