@@ -83,7 +83,7 @@ Deno.test(function testShowTreeErrors() {
 })
 
 Deno.test(function testShowTreeArgs() {
-    const args = parseArgs(['show-tree', '--depth=3', '--hostname=host1', '--path=C:\\path name'])
+    const args = parseArgs(['show-tree', '--depth', '3', '--hostname', 'host1', '--path', 'C:\\path name'])
     assert(args.paramSet === 'show-tree')
     assertEquals(args.depth, 3)
     assertEquals(args.hostname, { isAnyHost: false, host: 'host1' })

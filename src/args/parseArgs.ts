@@ -23,7 +23,6 @@ type GlobalOptions = {
 
 function getHelpTextForCommand(command: string): string | undefined {
     switch (command.toLowerCase()) {
-        case 'show-tree': return getCommandHelp_ShowTree()
         case 'sync': return getCommandHelp_Sync()
         default:
             return undefined
@@ -42,6 +41,7 @@ export function parseArgs(args: readonly string[]): RunMainParams {
         .command(cleanCommand)
         .command(ignoreCommand)
         .command(mergeCommand)
+        .command(showTreeCommand)
     const result = commandLine
         .parse(args)
 
@@ -137,8 +137,6 @@ export function parseArgs(args: readonly string[]): RunMainParams {
         } as T & GlobalOptions
     }
     switch (command) {
-        case 'show-tree':
-            return addGlobalOptions(parseCommand_ShowTree(commandArgs))
         case 'sync':
             return addGlobalOptions(parseCommand_Sync(commandArgs))
     }
@@ -262,18 +260,6 @@ const mergeCommand: Command<MergeParameters> = {
     },
 }
 
-function getCommandHelp_ShowTree() { return `
-Usage: file-db show-tree [--depth=5] [--hostname=<host>] [--path=<path-prefix>]
-Show a tree-map of the scanned files.
-    --depth=<depth>      The depth of the tree to show. Default is 5.
-                         0 will show all files.
-    --hostname=<host>    Show only files on the given host. If not specified, show all hosts.
-    --path=<path-prefix> Show only files with the given path prefix.
-    --keep-alive         Keep the server alive after showing the tree.
-    --primary-count=size|descendants
-                         Base the tree size on the contained size or on the number of descendants.
-` }
-
 type ShowTree_HostParameter = {
     isAnyHost: true
 } | {
@@ -294,86 +280,60 @@ type ShowTreeParameters = {
     keepAlive: boolean
     primaryCount: PrimaryCountOption
 }
-function parseCommand_ShowTree(args: readonly string[]) {
-
-    let depth = 5
-    let hostname: ShowTree_HostParameter = { isAnyHost: true }
-    let path: ShowTree_PathParameter = { isAnyPath: true }
-    let keepAlive = false
-    let primaryCount: PrimaryCountOption = 'size'
-    let isDepthSet = false
-    let isHostnameSet = false
-    let isPathSet = false
-    let isPrimaryCountSet = false
-
-    function error(message: string) {
-        return {
-            paramSet: 'error',
-            error: message,
-            helpText: getHelpTextForCommand('show-tree')!,
-        } as const
-    }
-    for (const arg of args) {
-        if (arg.startsWith('--depth=')) {
-            if (isDepthSet) {
-                return error(`Duplicate depth argument: ${arg}`)
-            }
-            isDepthSet = true
-
-            const depthArg = arg.slice('--depth='.length)
-            depth = parseInt(depthArg, 10)
-            if (isNaN(depth) || depth < 0) {
-                return error(`Invalid depth argument: ${depthArg}`)
-            }
-        } else if (arg.startsWith('--hostname=')) {
-            if (isHostnameSet) {
-                return error(`Duplicate hostname argument: ${arg}`)
-            }
-            isHostnameSet = true
-
-            const host = arg.slice('--hostname='.length)
-            if (host === '') {
-                return error(`Invalid hostname argument: ${arg}`)
-            }
-            hostname = { isAnyHost: false, host }
-        } else if (arg.startsWith('--path=')) {
-            if (isPathSet) {
-                return error(`Duplicate path argument: ${arg}`)
-            }
-            isPathSet = true
-
-            const pathPrefix = arg.slice('--path='.length)
-            if (pathPrefix === '') {
-                return error(`Invalid path argument: ${arg}`)
-            }
-            path = { isAnyPath: false, prefix: pathPrefix }
-        } else if (arg === '--keep-alive') {
-            keepAlive = true
-        } else if (arg.startsWith('--primary-count=')) {
-            if (isPrimaryCountSet) {
-                return error(`Duplicate primary count argument: ${arg}`)
-            }
-            isPrimaryCountSet = true
-
-            const primaryCountArg = arg.slice('--primary-count='.length)
-            if (primaryCountArg === 'size' || primaryCountArg === 'descendants') {
-                primaryCount = primaryCountArg
-            } else {
-                return error(`Invalid primary count argument: ${arg}`)
-            }
-        } else {
-            return error(`Invalid argument for show-tree command: ${arg}`)
+const showTreeCommand: Command<ShowTreeParameters> = {
+    command: 'show-tree',
+    example: '',
+    description: 'Show a tree-map of the scanned files.',
+    options: [{
+        key: 'depth', example: '--depth <depth>',
+        description: 'The depth of the tree to show. Default is 5. 0 will show all files.',
+        default: ['5'],
+    }, {
+        key: 'hostname', example: '--hostname <host>',
+        description: 'Show only files on the given host. If not specified, show all hosts.',
+        default: undefined,
+    }, {
+        key: 'path', example: '--path <path-prefix>',
+        description: 'Show only files with the given path prefix.',
+        default: undefined,
+    }, {
+        key: 'keep-alive', example: '--keep-alive',
+        description: 'Keep the server alive after showing the tree.',
+        default: undefined,
+    }, {
+        key: 'primary-count', example: '--primary-count <size|descendants>',
+        description: 'Base the tree size on the contained size or on the number of descendants.',
+        default: ['size'],
+    }],
+    action: (params, args) => {
+        if (params.length > 0) {
+            throw `Unexpected parameters for show-tree command: ${params.join(' ')}`
         }
+        const depth = parseInt(checkString(args['depth'])!, 10)
+        if (isNaN(depth) || depth < 0) {
+            throw `Invalid depth argument: ${args['depth']}`
+        }
+        const hostnameArg = checkString(args['hostname'])
+        const pathArg = checkString(args['path'])
+        const primaryCountArg = checkString(args['primary-count'])
+        if (!(primaryCountArg === 'size' || primaryCountArg === 'descendants')) {
+            throw `Invalid primary count argument: ${primaryCountArg}`
+        }
+
+        const result: ShowTreeParameters = {
+            paramSet: 'show-tree' as const,
+            depth,
+            hostname: hostnameArg
+                ? { isAnyHost: false, host: hostnameArg }
+                : { isAnyHost: true },
+            path: pathArg
+                ? { isAnyPath: false, prefix: pathArg }
+                : { isAnyPath: true },
+            keepAlive: checkFlag(args['keep-alive']),
+            primaryCount: primaryCountArg as PrimaryCountOption,
+        }
+        return result
     }
-    const params: ShowTreeParameters = {
-        paramSet: 'show-tree',
-        depth,
-        hostname,
-        path,
-        keepAlive,
-        primaryCount,
-    }
-    return params
 }
 
 function getCommandHelp_Sync() { return `
