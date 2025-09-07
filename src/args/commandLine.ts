@@ -51,10 +51,10 @@ export class CommandLine<GlobalOptions, ResultType = ErrorSet | HelpSet> {
     private configureGlobals: (globals: Record<string, string[] | undefined>) => GlobalOptions
 
     constructor(
-        optoins: Option[],
+        options: Option[],
         configureGlobals: (globals: Record<string, string[] | undefined>) => GlobalOptions
     ) {
-        for (const option of optoins) {
+        for (const option of options) {
             assert(!this.globalOptions.some(_ => _.key === option.key), `Option ${option.key} already added`)
             this.globalOptions.push(option)
         }
