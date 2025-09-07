@@ -21,14 +21,6 @@ type GlobalOptions = {
     dbPath: string
 }
 
-function getHelpTextForCommand(command: string): string | undefined {
-    switch (command.toLowerCase()) {
-        case 'sync': return getCommandHelp_Sync()
-        default:
-            return undefined
-    }
-}
-
 export function parseArgs(args: readonly string[]): RunMainParams {
     const commandLine = new CommandLine([{
             key: 'db-path',
@@ -42,130 +34,12 @@ export function parseArgs(args: readonly string[]): RunMainParams {
         .command(ignoreCommand)
         .command(mergeCommand)
         .command(showTreeCommand)
-    const result = commandLine
+        .command(syncCommand)
+    const result: RunMainParams = commandLine
         .parse(args)
 
-    if (result !== undefined) {
-        const validated = result as RunMainParams
-        if (validated.paramSet !== 'error'
-            || !validated.error.match(/Command [^ ]+ not recognized/)
-        ) {
-            return validated
-        }
-    }
-
-    const helpText = getCommandHelp()
-    const helpArgIndex = args.findIndex(arg => [''].includes(arg.toLowerCase()))
-    if (helpArgIndex !== -1) {
-        const helpArgs = args.toSpliced(helpArgIndex, 1)
-        if (helpArgs.length === 0) {
-            return { paramSet: 'help', helpText, }
-        }
-        if (helpArgs.length > 1) {
-            return {
-                paramSet: 'error',
-                error: `Too many arguments for help command: ${helpArgs.join(' ')}`,
-                helpText,
-            }
-        }
-        const [command] = helpArgs
-        if (command === '--global-options') {
-            return {
-                paramSet: 'help',
-                helpText: getGlobalOptionsHelp(),
-            }
-        }
-
-        const commandHelpText = getHelpTextForCommand(command)
-        if (commandHelpText === undefined) {
-            return {
-                paramSet: 'error',
-                error: `Unknown command for help: ${command}`,
-                helpText,
-            }
-        }
-        return {
-            paramSet: 'help',
-            helpText: commandHelpText,
-        }
-    }
-
-    function parseGlobalOptions(args: readonly string[]) {
-        const globalOptions: GlobalOptions = {
-            dbPath: 'file-db.sqlite3',
-        }
-        const commandArgs: string[] = [...args]
-        for (let i = 0; i < args.length; i++) {
-            const arg = args[i]
-            if (arg.startsWith('--db=')) {
-                const dbPath = arg.slice('--db='.length)
-                if (dbPath === '') {
-                    return {
-                        error: `Invalid database path: ${arg}`,
-                    } as const
-                }
-                globalOptions.dbPath = dbPath
-                commandArgs.splice(i, 1)
-            }
-        }
-        const command = args[0]?.toLowerCase()
-        commandArgs.splice(0, 1)
-        return {
-            globalOptions,
-            command,
-            commandArgs,
-        }
-    }
-    const {
-        error,
-        globalOptions,
-        command,
-        commandArgs,
-    } = parseGlobalOptions(args)
-    if (error) {
-        return {
-            paramSet: 'error',
-            error,
-            helpText,
-        } as const
-    }
-
-    function addGlobalOptions<T>(params: T): T & GlobalOptions {
-        return {
-            ...params,
-            ...globalOptions,
-        } as T & GlobalOptions
-    }
-    switch (command) {
-        case 'sync':
-            return addGlobalOptions(parseCommand_Sync(commandArgs))
-    }
-
-    return {
-        paramSet: 'error',
-        error: `Unknown command: ${args.join(' ')}`,
-        helpText,
-    }
+    return result
 }
-
-function getCommandHelp() { return `
-Usage: file-db [global-options] <command> [options]
-Commands:
-  help, --help, -h       Show this help message and exit
-  help <command>         Show help for a specific command
-  help --global-options  Show help for global options
-  ignore <parameters ..> Add or remove ignored paths
-  merge <remote-db>      Merge a remote database
-  show-tree              Show a tree-map of the scanned files
-  sync <path>            Sync the database with the file system
-` }
-
-function getGlobalOptionsHelp() { return `
-Usage: file-db [global-options] <command> [options]
-Global Options:
-  --db=<path>  Path to the database file. The default is
-                   file-db.sqlite3 in the current directory.
-` }
 
 type CleanParameters = {
     paramSet: 'clean'
@@ -336,28 +210,24 @@ const showTreeCommand: Command<ShowTreeParameters> = {
     }
 }
 
-function getCommandHelp_Sync() { return `
-Usage: file-db sync <path>
-Sync the database with the file system. This will update the database to match the current state of the file system.
-    sync <path>  Sync the database with the file system at the given path.
-` }
-
 type SyncParameters = {
     paramSet: 'sync'
     filePath: string
 }
-function parseCommand_Sync(args: readonly string[]) {
-    const [filePath] = args
-    if (filePath === undefined || args.length > 1) {
-        return {
-            paramSet: 'error',
-            error: `Invalid arguments for sync command: ${args.join(' ')}`,
-            helpText: getHelpTextForCommand('sync')!,
-        } as const
-    }
-    const params: SyncParameters = {
-        paramSet: 'sync',
-        filePath,
-    }
-    return params
+const syncCommand: Command<SyncParameters> = {
+    command: 'sync',
+    example: '<path>',
+    description: 'Sync the database with the file system. This will update the database to match the current state of the file system.',
+    options: [],
+    action: (params) => {
+        if (params.length !== 1) {
+            throw `Invalid arguments for sync command: ${params.join(' ')}`
+        }
+        const [filePath] = params
+        const result: SyncParameters = {
+            paramSet: 'sync' as const,
+            filePath,
+        }
+        return result
+    },
 }
