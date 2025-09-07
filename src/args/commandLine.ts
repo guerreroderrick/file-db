@@ -40,6 +40,10 @@ export function checkString(args: string[] | undefined) {
     assert(false, `Too many arguments for option: ${args}`)
 }
 
+// deno-lint-ignore ban-types
+type Prettify<T> = { [K in keyof T]: T[K] } & {}
+type AddType<T, U> = T | U
+
 export class CommandLine<GlobalOptions, ResultType = ErrorSet | HelpSet> {
     globalOptions: Option[] = [{
         key: 'help',
@@ -100,14 +104,14 @@ export class CommandLine<GlobalOptions, ResultType = ErrorSet | HelpSet> {
 
     command<AddResultType>(
         command: Command<AddResultType>
-    ): CommandLine<ResultType | (AddResultType & GlobalOptions)>
+    )
     {
         assert(!this.commands.some(_ => _.command === command.command), `Command ${command.command} already added`)
         ; (this.commands as unknown as Command<ResultType | AddResultType>[]).push(command)
-        return this as unknown as CommandLine<ResultType | (AddResultType & GlobalOptions)>
+        return this as CommandLine<GlobalOptions, Prettify<AddType<ResultType, AddResultType & GlobalOptions>>>
     }
 
-    parse(args: readonly string[]): undefined | ResultType {
+    parse(args: readonly string[]): ResultType {
         const parameters: string[] = []
         const argOptions: Record<string, string[] | undefined> = {}
         const optionSet = [...this.globalOptions]
