@@ -1,6 +1,6 @@
 # Todo
 - [-] Watch path and report patches to possibly deconflict
-  - [-] Refactor arguments
+  - [x] Refactor arguments
   - [ ] Watch path until Ctrl+c
     - [ ] Report matching hashes
     - [ ] Save new paths for adds
