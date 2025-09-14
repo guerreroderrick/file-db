@@ -2,7 +2,7 @@ import { DB } from '../../deps.ts'
 import { registerProcessCleanup } from '../registerProcessCleanup.ts'
 import { memo } from "../util/once.ts";
 import { initSchema } from './initSchema.ts'
-import * as path from 'jsr:@std/path'
+import * as path from '@std/path'
 
 export function getDefaultDatabase(dbPath?: string) {
     return lazy_getDefaultDatabase(dbPath)

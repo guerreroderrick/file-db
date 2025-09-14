@@ -1,5 +1,5 @@
-import { assert } from 'jsr:@std/assert/assert'
-import { assertEquals } from 'jsr:@std/assert/equals'
+import { assert } from '@std/assert/assert'
+import { assertEquals } from '@std/assert/equals'
 import { addFileListing } from "./addFileListing.ts"
 import { updateFileHash } from "./updateFileHash.ts"
 import { dbTestData } from "./__test_dbTestData.ts"

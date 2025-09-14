@@ -1,4 +1,4 @@
-import { assert } from 'jsr:@std/assert/assert'
+import { assert } from '@std/assert/assert'
 import { DB } from '../../deps.ts'
 import { FileEntry } from '../path/listFiles.ts'
 

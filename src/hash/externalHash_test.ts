@@ -1,5 +1,5 @@
-import { assert } from 'jsr:@std/assert'
-import { assertSnapshot } from 'jsr:@std/testing/snapshot'
+import { assert } from '@std/assert'
+import { assertSnapshot } from '@std/testing/snapshot'
 import { ExternalHasher } from "./externalHash.ts";
 
 const baseDirectory = import.meta.dirname

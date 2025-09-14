@@ -1,5 +1,5 @@
-import { assertEquals } from 'jsr:@std/assert/equals'
-import { assertThrows } from 'jsr:@std/assert/throws'
+import { assertEquals } from '@std/assert/equals'
+import { assertThrows } from '@std/assert/throws'
 import { getCanonicalPath, getCanonicalPathType, PathType } from "./getCanonicalPath.ts";
 
 Deno.test(function testDrivePathsUseBackslash() {

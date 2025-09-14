@@ -1,4 +1,4 @@
-import { assert } from 'jsr:@std/assert/assert'
+import { assert } from '@std/assert/assert'
 import { resolvePathWithFallback, stripFilePrefix } from '../util/pathResolution.ts'
 
 const externalHashCommand = await (async () => {

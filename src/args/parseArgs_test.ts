@@ -1,8 +1,8 @@
-import { assertEquals } from 'jsr:@std/assert/equals'
+import { assertEquals } from '@std/assert/equals'
 import { DEFAULT_DB_PATH, parseArgs } from './parseArgs.ts'
-import { assert } from 'jsr:@std/assert/assert'
-import { assertStringIncludes } from 'jsr:@std/assert/string-includes'
-import { assertSnapshot } from "jsr:@std/testing/snapshot";
+import { assert } from '@std/assert/assert'
+import { assertStringIncludes } from '@std/assert/string-includes'
+import { assertSnapshot } from '@std/testing/snapshot'
 
 Deno.test(function testEmptyArgs() {
     const args = parseArgs([])

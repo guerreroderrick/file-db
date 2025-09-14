@@ -1,5 +1,5 @@
-import { assert } from 'jsr:@std/assert/assert'
-import * as path from 'jsr:@std/path'
+import { assert } from '@std/assert/assert'
+import * as path from '@std/path'
 
 export type PathType = 'windows' | 'unc' | 'unix'
 export function getCanonicalPath(filePath: string) {

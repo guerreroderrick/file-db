@@ -1,7 +1,7 @@
 import { DBCheckedFile } from "../db/dbCheckedFile.ts";
 import { getDefaultDatabase } from "../db/getDefaultDatabase.ts";
 import { mergeDb } from "../db/mergeDb.ts";
-import * as path from 'jsr:@std/path'
+import * as path from '@std/path'
 
 type MergeDbParams = {
     dbPath: string

@@ -1,4 +1,4 @@
-import { assertEquals } from 'jsr:@std/assert/equals'
+import { assertEquals } from '@std/assert/equals'
 import { getSizeDescription } from './getSizeDescription.ts';
 
 Deno.test(function testGetSizeDescription() {
