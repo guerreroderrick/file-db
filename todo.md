@@ -6,6 +6,9 @@
     - [ ] Save new paths for adds
     - [ ] Update paths for moves
     - [ ] Remove paths for deletes
+- [ ] Add copy with Verify
+  - [ ] Add xxHash3-64 for quick non-conflict hash
+  - [ ] Copy and auto-update
 - [:] Clean archived and vacuum
   - [x] Add scanId for pathErrors
   - [x] Record scan entries to know which are previous
