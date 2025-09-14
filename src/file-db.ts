@@ -90,6 +90,18 @@ async function runParameterSet(params: RunMainParams) {
             })
             return
         }
+        case 'watch': {
+            const { dbPath, filePath } = params
+            const correctDrivePaths = filePath.match(/^[a-z]:$/i)
+                ? `${filePath}/`
+                : filePath
+            console.log({
+                debug: 'Watch not yet implemented',
+                dbPath,
+                filePath: correctDrivePaths,
+            })
+            return
+        }
         default: { const _: never = params }
     }
 }

@@ -1,6 +1,7 @@
 
 export { contentType } from "https://deno.land/std@0.224.0/media_types/mod.ts"
 export { DB } from 'https://deno.land/x/sqlite@v3.9.1/mod.ts'
+export { JSZip } from 'https://deno.land/x/jszip/mod.ts'
 export { open } from 'jsr:@opensrc/deno-open'
-export * as path from 'jsr:@std/path'
+export * as path from '@std/path'
 export { format } from 'npm:date-fns'

@@ -1,6 +1,15 @@
 # Todo
-
-- [-] Clean archived and vacuum
+- [-] Watch path and report patches to possibly deconflict
+  - [x] Refactor arguments
+  - [ ] Watch path until Ctrl+c
+    - [ ] Report matching hashes
+    - [ ] Save new paths for adds
+    - [ ] Update paths for moves
+    - [ ] Remove paths for deletes
+- [ ] Add copy with Verify
+  - [ ] Add xxHash3-64 for quick non-conflict hash
+  - [ ] Copy and auto-update
+- [:] Clean archived and vacuum
   - [x] Add scanId for pathErrors
   - [x] Record scan entries to know which are previous
     - [x] Ensure last version doesn't add test data
@@ -9,10 +18,10 @@
   - [ ] Remove prior scanIds on clean per hostname and path
   - [ ] Show vacuum saved space and only swap if > 0
 - [ ] Include directory hashes during scan
-  - [-] Merge remote db should update ignores
+  - [:] Merge remote db should update ignores
   - [ ] Batch show-tree query so it can be cancelled for large scans
   - [ ] Missing descendents during scan should be marked as archived
-- [-] Decide paths to ignore
+- [:] Decide paths to ignore
   - [x] List immediate children below graph
 - [ ] Only log new path errors
 

@@ -1,4 +1,4 @@
-import { assertEquals } from 'jsr:@std/assert/equals'
+import { assertEquals } from '@std/assert/equals'
 import { dbTestData } from "./__test_dbTestData.ts"
 import { PathError } from "../path/listFiles.ts";
 import { addPathError } from "./addPathError.ts";

@@ -1,4 +1,4 @@
-import { assert } from 'jsr:@std/assert/assert'
+import { assert } from '@std/assert/assert'
 import { getCanonicalPath } from "./getCanonicalPath.ts";
 import { tryCatch } from "../util/tryCatch.ts";
 

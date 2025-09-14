@@ -1,5 +1,5 @@
-import { isAbsolute } from 'jsr:@std/path@^1.0.8/is-absolute'
-import { assert } from 'jsr:@std/assert/assert'
+import { isAbsolute } from '@std/path'
+import { assert } from '@std/assert/assert'
 import { getDefaultDatabase } from "../db/getDefaultDatabase.ts";
 import { addIgnorePath, IgnoreType } from "../db/addIgnorePath.ts";
 

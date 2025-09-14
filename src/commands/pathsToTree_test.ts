@@ -1,7 +1,7 @@
 import { TreeMapNode, TrimmedTreeMapNode } from './showTree.ts'
-import { FileEntry } from "../db/getDescendants.ts";
-import { assertSnapshot } from "jsr:@std/testing/snapshot";
-import { assertEquals } from "@std/assert/equals";
+import { FileEntry } from '../db/getDescendants.ts'
+import { assertSnapshot } from '@std/testing/snapshot'
+import { assertEquals } from '@std/assert/equals'
 
 Deno.test(async function testPathToTree_emptyPathsIsEmpty(snaps) {
     const root = pathsToTree([])

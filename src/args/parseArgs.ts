@@ -1,202 +1,71 @@
 import { PrimaryCountOption } from '../commands/showTree.ts'
 import { IgnoreType } from "../db/addIgnorePath.ts";
+import { checkFlag, checkString, Command, CommandLine, ErrorSet, HelpSet } from "./commandLine.ts";
 
-export type RunMainParams = {
-    paramSet: 'error'
-    error: string
-    helpText: string
-} | {
-    paramSet: 'help'
-    helpText: string
-} | (GlobalOptions
-    & (CleanParameters
-        | IgnoreParameters
-        | MergeParameters
-        | ShowTreeParameters
-        | SyncParameters
+export const DEFAULT_DB_PATH = 'file-db.sqlite3'
+
+export type RunMainParams = 
+    ErrorSet
+    | HelpSet
+    | (GlobalOptions
+        & (CleanParameters
+            | IgnoreParameters
+            | MergeParameters
+            | ShowTreeParameters
+            | SyncParameters
+            | WatchParameters
+        )
     )
-)
+
 
 type GlobalOptions = {
     dbPath: string
 }
 
-function getHelpTextForCommand(command: string): string | undefined {
-    switch (command.toLowerCase()) {
-        case 'clean': return getCommandHelp_Clean()
-        case 'ignore': return getCommandHelp_Ignore()
-        case 'merge': return getCommandHelp_Merge()
-        case 'show-tree': return getCommandHelp_ShowTree()
-        case 'sync': return getCommandHelp_Sync()
-        default:
-            return undefined
-    }
-}
-
 export function parseArgs(args: readonly string[]): RunMainParams {
-    const helpText = getCommandHelp()
-    const helpArgIndex = args.findIndex(arg => ['help', '--help', '-h'].includes(arg.toLowerCase()))
-    if (helpArgIndex !== -1) {
-        const helpArgs = args.toSpliced(helpArgIndex, 1)
-        if (helpArgs.length === 0) {
-            return { paramSet: 'help', helpText, }
-        }
-        if (helpArgs.length > 1) {
-            return {
-                paramSet: 'error',
-                error: `Too many arguments for help command: ${helpArgs.join(' ')}`,
-                helpText,
-            }
-        }
-        const [command] = helpArgs
-        if (command === '--global-options') {
-            return {
-                paramSet: 'help',
-                helpText: getGlobalOptionsHelp(),
-            }
-        }
+    const commandLine = new CommandLine([{
+            key: 'db-path',
+            example: '--db-path <filepath>',
+            description: 'the path of the database',
+            default: [DEFAULT_DB_PATH],
+        }], globals => ({
+            dbPath: checkString(globals['db-path'])!,
+        }))
+        .command(cleanCommand)
+        .command(ignoreCommand)
+        .command(mergeCommand)
+        .command(showTreeCommand)
+        .command(syncCommand)
+        .command(watchCommand)
+    const result: RunMainParams = commandLine
+        .parse(args)
 
-        const commandHelpText = getHelpTextForCommand(command)
-        if (commandHelpText === undefined) {
-            return {
-                paramSet: 'error',
-                error: `Unknown command for help: ${command}`,
-                helpText,
-            }
-        }
-        return {
-            paramSet: 'help',
-            helpText: commandHelpText,
-        }
-    }
-
-    function parseGlobalOptions(args: readonly string[]) {
-        const globalOptions: GlobalOptions = {
-            dbPath: 'file-db.sqlite3',
-        }
-        const commandArgs: string[] = [...args]
-        for (let i = 0; i < args.length; i++) {
-            const arg = args[i]
-            if (arg.startsWith('--db=')) {
-                const dbPath = arg.slice('--db='.length)
-                if (dbPath === '') {
-                    return {
-                        error: `Invalid database path: ${arg}`,
-                    } as const
-                }
-                globalOptions.dbPath = dbPath
-                commandArgs.splice(i, 1)
-            }
-        }
-        const command = args[0]?.toLowerCase()
-        commandArgs.splice(0, 1)
-        return {
-            globalOptions,
-            command,
-            commandArgs,
-        }
-    }
-    const {
-        error,
-        globalOptions,
-        command,
-        commandArgs,
-    } = parseGlobalOptions(args)
-    if (error) {
-        return {
-            paramSet: 'error',
-            error,
-            helpText,
-        } as const
-    }
-
-    function addGlobalOptions<T>(params: T): T & GlobalOptions {
-        return {
-            ...params,
-            ...globalOptions,
-        } as T & GlobalOptions
-    }
-    switch (command) {
-        case 'clean':
-            return addGlobalOptions(parseCommand_Clean(commandArgs))
-        case 'ignore':
-            return addGlobalOptions(parseCommand_Ignore(commandArgs))
-        case 'merge':
-            return addGlobalOptions(parseCommand_Merge(commandArgs))
-        case 'show-tree':
-            return addGlobalOptions(parseCommand_ShowTree(commandArgs))
-        case 'sync':
-            return addGlobalOptions(parseCommand_Sync(commandArgs))
-    }
-
-    return {
-        paramSet: 'error',
-        error: `Unknown command: ${args.join(' ')}`,
-        helpText,
-    }
+    return result
 }
-
-function getCommandHelp() { return `
-Usage: file-db [global-options] <command> [options]
-Commands:
-  help, --help, -h       Show this help message and exit
-  help <command>         Show help for a specific command
-  help --global-options  Show help for global options
-  ignore <parameters ..> Add or remove ignored paths
-  merge <remote-db>      Merge a remote database
-  show-tree              Show a tree-map of the scanned files
-  sync <path>            Sync the database with the file system
-` }
-
-function getGlobalOptionsHelp() { return `
-Usage: file-db [global-options] <command> [options]
-Global Options:
-  --db=<path>  Path to the database file. The default is
-                   file-db.sqlite3 in the current directory.
-` }
-
-function getCommandHelp_Clean() { return `
-Usage: file-db clean [--dry-run]
-Remove archive entries and vacuum the database.
-    --dry-run  Log the archived entries but do not remove them.
-               This option does not vacuum.
-` }
 
 type CleanParameters = {
     paramSet: 'clean'
     dryRun: boolean
 }
-
-function parseCommand_Clean(args: readonly string[]) {
-    if (args.length > 1) {
-        return {
-            paramSet: 'error',
-            error: `Invalid arguments for clean command: ${args.join(' ')}`,
-            helpText: getHelpTextForCommand('clean')!,
-        } as const
-    }
-    const dryRun = args.includes('--dry-run')
-    if (args.length > 0 && !args.includes('--dry-run')) {
-        return {
-            paramSet: 'error',
-            error: `Invalid argument for clean command: ${args.join(' ')}`,
-            helpText: getHelpTextForCommand('clean')!,
-        } as const
-    }
-    const params: CleanParameters = {
-        paramSet: 'clean',
-        dryRun,
-    }
-    return params
+const cleanCommand: Command<CleanParameters> = {
+    command: 'clean', example: '',
+    description: 'Remove archive entries and vacuum the database. This option does not vacuum',
+    options: [{
+        key: 'dry-run', example: '--dry-run',
+        description: 'Log the archived entries but do not remove them.',
+        default: undefined,
+    }],
+    action: (params, args) => {
+        if (params.length > 0) {
+            throw `Unexpected parameters for clean command: ${params.join(' ')}`
+        }
+        const result: CleanParameters = {
+            paramSet: 'clean' as const,
+            dryRun: checkFlag(args['dry-run']),
+        }
+        return result
+    },
 }
-
-function getCommandHelp_Ignore() { return `
-Usage: file-db ignore add <path> --hostname=<hostname>
-Add a path to the ignore list. This will mark the path as ignored but not remove any existing entries.
-    --hostname=<hostname>  The hostname to use for the ignore entry. If not specified, the current hostname will be used.
-    --prefix               The path is a prefix. This will ignore all files that start with the given path.
-    --name                 The path is a name. This will ignore all files with the given name.
-` }
 
 type IgnoreParameters = {
     paramSet: 'ignore action'
@@ -205,99 +74,67 @@ type IgnoreParameters = {
     filePath: string
     hostname?: string
 }
-function parseCommand_Ignore(args: readonly string[]) {
-    const [action, filePath, hostnamePart] = args
-    const hostnameError = hostnamePart !== undefined && !hostnamePart.startsWith('--hostname=')
-    if (action !== 'add' || filePath === undefined || hostnameError) {
-        return {
-            paramSet: 'error',
-            error: `Invalid arguments for ignore: ${args.join(' ')}`,
-            helpText: getHelpTextForCommand('ignore')!,
-        } as const
-    }
-
-    let ignoreType: IgnoreType = 'prefix'
-    let ignoreTypeSet = false
-    for (const remainingArg of args.slice(3)) {
-        if (remainingArg === '--prefix') {
-            if (ignoreTypeSet) {
-                return {
-                    paramSet: 'error',
-                    error: `Duplicate ignore type argument: ${remainingArg}`,
-                    helpText: getHelpTextForCommand('ignore')!,
-                } as const
-            }
-            ignoreType = 'prefix'
-            ignoreTypeSet = true
-        } else if (remainingArg === '--name') {
-            if (ignoreTypeSet) {
-                return {
-                    paramSet: 'error',
-                    error: `Duplicate ignore type argument: ${remainingArg}`,
-                    helpText: getHelpTextForCommand('ignore')!,
-                } as const
-            }
-            ignoreType = 'name'
-            ignoreTypeSet = true
-        } else {
-            return {
-                paramSet: 'error',
-                error: `Invalid argument for ignore command: ${remainingArg}`,
-                helpText: getHelpTextForCommand('ignore')!,
-            } as const
+const ignoreCommand: Command<IgnoreParameters> = {
+    command: 'ignore',
+    example: 'add',
+    description: 'Add a path to the ignore list. This will mark the path as ignored but not remove any existing entries.',
+    options: [{
+        key: 'hostname', example: '--hostname <hostname>',
+        description: 'The hostname to use for the ignore entry. If not specified, the current hostname will be used.',
+        default: undefined,
+    }, {
+        key: 'prefix', example: '--prefix|--name',
+        description: 'The path is a prefix. This will ignore all files that start with the given path.',
+        default: undefined,
+    }, {
+        key: 'name', example: '',
+        description: 'The path is a name. This will ignore all files with the given name.',
+        default: undefined,
+    }],
+    action: (params, args) => {
+        const [action, filePath, extra] = params
+        if (action !== 'add' || filePath === undefined || extra !== undefined) {
+            throw `Invalid parameters for ignore command: ${params.join(' ')}`
         }
-    }
-
-    const hostname = hostnamePart?.slice('--hostname='.length)
-    const params: IgnoreParameters = {
-        paramSet: 'ignore action',
-        action,
-        ignoreType,
-        filePath,
-        hostname,
-    }
-    return params
+        const name = checkFlag(args['name'])
+        const prefix = checkFlag(args['prefix'])
+        if (name && prefix) {
+            throw `Cannot specify both --name and --prefix`
+        }
+        const result: IgnoreParameters = {
+            paramSet: 'ignore action',
+            action: 'add' as const,
+            ignoreType: name ? 'name' : 'prefix',
+            filePath: filePath!,
+        }
+        return result
+    },
 }
-
-function getCommandHelp_Merge() { return `
-Usage: file-db merge <remote-db-path>
-Merge the database file with the local database. Conflicting files
-    will reserve the latest information, trusting the timestamps
-    within the database.
-` }
 
 type MergeParameters = {
     paramSet: 'merge'
     remoteDbPath: string
 }
 
-function parseCommand_Merge(args: readonly string[]) {
-    const [remoteDbPath] = args
-    if (remoteDbPath === undefined || args.length > 1) {
-        return {
-            paramSet: 'error',
-            error: `Invalid arguments for merge command: ${args.join(' ')}`,
-            helpText: getHelpTextForCommand('merge')!,
-        } as const
-    }
-    const params: MergeParameters = {
-        paramSet: 'merge',
-        remoteDbPath,
-    }
-    return params
+const mergeCommand: Command<MergeParameters> = {
+    command: 'merge',
+    example: '<remote-db-path>',
+    description: `Merge the database file with the local database. Conflicting files
+    will reserve the latest information, trusting the timestamps
+    within the database.`,
+    options: [],
+    action: (params) => {
+        if (params.length !== 1) {
+            throw `Invalid parameters for merge command: ${params.join(' ')}`
+        }
+        const [remoteDbPath] = params
+        const result: MergeParameters = {
+            paramSet: 'merge',
+            remoteDbPath,
+        }
+        return result
+    },
 }
-
-function getCommandHelp_ShowTree() { return `
-Usage: file-db show-tree [--depth=5] [--hostname=<host>] [--path=<path-prefix>]
-Show a tree-map of the scanned files.
-    --depth=<depth>      The depth of the tree to show. Default is 5.
-                         0 will show all files.
-    --hostname=<host>    Show only files on the given host. If not specified, show all hosts.
-    --path=<path-prefix> Show only files with the given path prefix.
-    --keep-alive         Keep the server alive after showing the tree.
-    --primary-count=size|descendants
-                         Base the tree size on the contained size or on the number of descendants.
-` }
 
 type ShowTree_HostParameter = {
     isAnyHost: true
@@ -319,110 +156,102 @@ type ShowTreeParameters = {
     keepAlive: boolean
     primaryCount: PrimaryCountOption
 }
-function parseCommand_ShowTree(args: readonly string[]) {
-
-    let depth = 5
-    let hostname: ShowTree_HostParameter = { isAnyHost: true }
-    let path: ShowTree_PathParameter = { isAnyPath: true }
-    let keepAlive = false
-    let primaryCount: PrimaryCountOption = 'size'
-    let isDepthSet = false
-    let isHostnameSet = false
-    let isPathSet = false
-    let isPrimaryCountSet = false
-
-    function error(message: string) {
-        return {
-            paramSet: 'error',
-            error: message,
-            helpText: getHelpTextForCommand('show-tree')!,
-        } as const
-    }
-    for (const arg of args) {
-        if (arg.startsWith('--depth=')) {
-            if (isDepthSet) {
-                return error(`Duplicate depth argument: ${arg}`)
-            }
-            isDepthSet = true
-
-            const depthArg = arg.slice('--depth='.length)
-            depth = parseInt(depthArg, 10)
-            if (isNaN(depth) || depth < 0) {
-                return error(`Invalid depth argument: ${depthArg}`)
-            }
-        } else if (arg.startsWith('--hostname=')) {
-            if (isHostnameSet) {
-                return error(`Duplicate hostname argument: ${arg}`)
-            }
-            isHostnameSet = true
-
-            const host = arg.slice('--hostname='.length)
-            if (host === '') {
-                return error(`Invalid hostname argument: ${arg}`)
-            }
-            hostname = { isAnyHost: false, host }
-        } else if (arg.startsWith('--path=')) {
-            if (isPathSet) {
-                return error(`Duplicate path argument: ${arg}`)
-            }
-            isPathSet = true
-
-            const pathPrefix = arg.slice('--path='.length)
-            if (pathPrefix === '') {
-                return error(`Invalid path argument: ${arg}`)
-            }
-            path = { isAnyPath: false, prefix: pathPrefix }
-        } else if (arg === '--keep-alive') {
-            keepAlive = true
-        } else if (arg.startsWith('--primary-count=')) {
-            if (isPrimaryCountSet) {
-                return error(`Duplicate primary count argument: ${arg}`)
-            }
-            isPrimaryCountSet = true
-
-            const primaryCountArg = arg.slice('--primary-count='.length)
-            if (primaryCountArg === 'size' || primaryCountArg === 'descendants') {
-                primaryCount = primaryCountArg
-            } else {
-                return error(`Invalid primary count argument: ${arg}`)
-            }
-        } else {
-            return error(`Invalid argument for show-tree command: ${arg}`)
+const showTreeCommand: Command<ShowTreeParameters> = {
+    command: 'show-tree',
+    example: '',
+    description: 'Show a tree-map of the scanned files.',
+    options: [{
+        key: 'depth', example: '--depth <depth>',
+        description: 'The depth of the tree to show. Default is 5. 0 will show all files.',
+        default: ['5'],
+    }, {
+        key: 'hostname', example: '--hostname <host>',
+        description: 'Show only files on the given host. If not specified, show all hosts.',
+        default: undefined,
+    }, {
+        key: 'path', example: '--path <path-prefix>',
+        description: 'Show only files with the given path prefix.',
+        default: undefined,
+    }, {
+        key: 'keep-alive', example: '--keep-alive',
+        description: 'Keep the server alive after showing the tree.',
+        default: undefined,
+    }, {
+        key: 'primary-count', example: '--primary-count <size|descendants>',
+        description: 'Base the tree size on the contained size or on the number of descendants.',
+        default: ['size'],
+    }],
+    action: (params, args) => {
+        if (params.length > 0) {
+            throw `Unexpected parameters for show-tree command: ${params.join(' ')}`
         }
-    }
-    const params: ShowTreeParameters = {
-        paramSet: 'show-tree',
-        depth,
-        hostname,
-        path,
-        keepAlive,
-        primaryCount,
-    }
-    return params
-}
+        const depth = parseInt(checkString(args['depth'])!, 10)
+        if (isNaN(depth) || depth < 0) {
+            throw `Invalid depth argument: ${args['depth']}`
+        }
+        const hostnameArg = checkString(args['hostname'])
+        const pathArg = checkString(args['path'])
+        const primaryCountArg = checkString(args['primary-count'])
+        if (!(primaryCountArg === 'size' || primaryCountArg === 'descendants')) {
+            throw `Invalid primary count argument: ${primaryCountArg}`
+        }
 
-function getCommandHelp_Sync() { return `
-Usage: file-db sync <path>
-Sync the database with the file system. This will update the database to match the current state of the file system.
-    sync <path>  Sync the database with the file system at the given path.
-` }
+        const result: ShowTreeParameters = {
+            paramSet: 'show-tree' as const,
+            depth,
+            hostname: hostnameArg
+                ? { isAnyHost: false, host: hostnameArg }
+                : { isAnyHost: true },
+            path: pathArg
+                ? { isAnyPath: false, prefix: pathArg }
+                : { isAnyPath: true },
+            keepAlive: checkFlag(args['keep-alive']),
+            primaryCount: primaryCountArg as PrimaryCountOption,
+        }
+        return result
+    }
+}
 
 type SyncParameters = {
     paramSet: 'sync'
     filePath: string
 }
-function parseCommand_Sync(args: readonly string[]) {
-    const [filePath] = args
-    if (filePath === undefined || args.length > 1) {
-        return {
-            paramSet: 'error',
-            error: `Invalid arguments for sync command: ${args.join(' ')}`,
-            helpText: getHelpTextForCommand('sync')!,
-        } as const
-    }
-    const params: SyncParameters = {
-        paramSet: 'sync',
-        filePath,
-    }
-    return params
+const syncCommand: Command<SyncParameters> = {
+    command: 'sync',
+    example: '<path>',
+    description: 'Sync the database with the file system. This will update the database to match the current state of the file system.',
+    options: [],
+    action: (params) => {
+        if (params.length !== 1) {
+            throw `Invalid arguments for sync command: ${params.join(' ')}`
+        }
+        const [filePath] = params
+        const result: SyncParameters = {
+            paramSet: 'sync' as const,
+            filePath,
+        }
+        return result
+    },
+}
+
+type WatchParameters = {
+    paramSet: 'watch'
+    filePath: string
+}
+const watchCommand: Command<WatchParameters> = {
+    command: 'watch',
+    example: '<path>',
+    description: 'Watch the given path for changes and update the database accordingly.',
+    options: [],
+    action: (params) => {
+        if (params.length !== 1) {
+            throw `Invalid arguments for watch command: ${params.join(' ')}`
+        }
+        const [filePath] = params
+        const result: WatchParameters = {
+            paramSet: 'watch' as const,
+            filePath,
+        }
+        return result
+    },
 }

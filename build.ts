@@ -1,7 +1,7 @@
-import * as esbuild from 'npm:esbuild'
-import { denoPlugins } from 'jsr:@luca/esbuild-deno-loader'
-import { JSZip } from 'https://deno.land/x/jszip/mod.ts'
-import { path } from "./deps.ts";
+import * as esbuild from 'esbuild'
+import { denoPlugins } from '@luca/esbuild-deno-loader'
+import { JSZip } from './deps.ts'
+import { path } from "./deps.ts"
 import { getSizeDescription } from './src/util/getSizeDescription.ts'
 
 if (import.meta.main) {
@@ -16,8 +16,9 @@ async function main() {
         cwd: './go',
     })
     await runOrThrow('deno', ['task', 'test-once'])
+    const pluginsToAdd = denoPlugins()
     await esbuild.build({
-        plugins: [...denoPlugins()],
+        plugins: pluginsToAdd,
         entryPoints: ['./src/file-db.ts'],
         outfile: './dist/file-db.js',
         bundle: true,
@@ -32,7 +33,7 @@ async function main() {
     await runOrThrow('deno', ['compile',
         '--output', './',
         '--target', 'x86_64-pc-windows-msvc',
-        ...'--allow-read --allow-write --allow-net --allow-run --allow-sys ./file-db.js'.split(' '),
+        ...'--allow-env --allow-read --allow-write --allow-net --allow-run --allow-sys ./file-db.js'.split(' '),
     ], {
         cwd: './dist',
     })
