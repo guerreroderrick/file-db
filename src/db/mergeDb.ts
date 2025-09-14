@@ -21,8 +21,8 @@ attach database '${fromDb.filename}' as [fromDb]
 
     const sync = () => {
         const [[srcVersion, destVersion]] = toDb.query<[number, number]>(`
-select (select id from [fromDb].[version]) [srcVersion]
-    , (select id from [version]) [destVersion]
+select (select max(id) from [fromDb].[version]) [srcVersion]
+    , (select max(id) from [version]) [destVersion]
         `)
         console.log({
             debug: 'Database versions',
@@ -57,16 +57,18 @@ create temp table files_Staging as
                 or src.hashTime > dest.hashTime
                 )
 ; create temp table pathErrors_Staging as
-    select src.hostname, src.path, src.scanTime, src.error
+    select src.hostname, src.path, src.scanId, src.scanTime, src.error
         from [fromDb].[pathErrors_Log] src
         left join [pathErrors_Log] dest on src.hostname = dest.hostname
             and src.path = dest.path
+            and src.scanId = dest.scanId
             and src.scanTime = dest.scanTime
         where dest.hostname is null
 ; create temp table ignoredFiles_Staging as
-    select src.hostname, src.path, src.addedAt
+    select src.ignoreType, src.hostname, src.path, src.addedAt
         from [fromDb].[ignoredFiles_Log] src
-        left join [ignoredFiles_Log] dest on src.hostname = dest.hostname
+        left join [ignoredFiles_Log] dest on src.ignoreType = dest.ignoreType
+            and src.hostname = dest.hostname
             and src.path = dest.path
             and src.addedAt = dest.addedAt
         where dest.hostname is null
@@ -102,8 +104,8 @@ with archivedFiles as (
             debug: 'Inserting new path errors',
         })
         toDb.execute(`
-insert into pathErrors_Log (hostname, path, scanTime, error)
-    select hostname, path, scanTime, error
+insert into pathErrors_Log (hostname, path, scanId, scanTime, error)
+    select hostname, path, scanId, scanTime, error
         from pathErrors_Staging
         `)
         const pathErrorsChanges = toDb.changes
@@ -112,8 +114,8 @@ insert into pathErrors_Log (hostname, path, scanTime, error)
             debug: 'Inserting new ignored files',
         })
         toDb.execute(`
-insert into ignoredFiles_Log (hostname, path, addedAt)
-    select hostname, path, addedAt
+insert into ignoredFiles_Log (ignoreType, hostname, path, addedAt)
+    select ignoreType, hostname, path, addedAt
         from ignoredFiles_Staging
         `)
         const ignoredFilesChanges = toDb.changes
@@ -122,6 +124,7 @@ insert into ignoredFiles_Log (hostname, path, addedAt)
         const rows = toDb.query<[hostname: string, path: string]>(`
 select hostname, path
     from ignoredFiles_Staging
+    where ignoreType = 'prefix'
 `)
         console.log({
             debug: 'Readding staged ignore paths',
@@ -132,6 +135,7 @@ select hostname, path
                 db: toDb,
                 hostname,
                 filePath: path,
+                ignoreType: 'prefix',
             })
             fileLogNewlyIgnored += numIgnored
         }

@@ -18,6 +18,7 @@ Deno.test(function testAddPathError() {
     addPathError({
         db: testDb,
         hostname: 'test-hostname',
+        scanId: 10,
         pathError,
     })
 
