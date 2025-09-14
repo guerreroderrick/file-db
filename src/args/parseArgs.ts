@@ -13,6 +13,7 @@ export type RunMainParams =
             | MergeParameters
             | ShowTreeParameters
             | SyncParameters
+            | WatchParameters
         )
     )
 
@@ -35,6 +36,7 @@ export function parseArgs(args: readonly string[]): RunMainParams {
         .command(mergeCommand)
         .command(showTreeCommand)
         .command(syncCommand)
+        .command(watchCommand)
     const result: RunMainParams = commandLine
         .parse(args)
 
@@ -226,6 +228,28 @@ const syncCommand: Command<SyncParameters> = {
         const [filePath] = params
         const result: SyncParameters = {
             paramSet: 'sync' as const,
+            filePath,
+        }
+        return result
+    },
+}
+
+type WatchParameters = {
+    paramSet: 'watch'
+    filePath: string
+}
+const watchCommand: Command<WatchParameters> = {
+    command: 'watch',
+    example: '<path>',
+    description: 'Watch the given path for changes and update the database accordingly.',
+    options: [],
+    action: (params) => {
+        if (params.length !== 1) {
+            throw `Invalid arguments for watch command: ${params.join(' ')}`
+        }
+        const [filePath] = params
+        const result: WatchParameters = {
+            paramSet: 'watch' as const,
             filePath,
         }
         return result
