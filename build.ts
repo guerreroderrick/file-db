@@ -32,7 +32,7 @@ async function main() {
     await runOrThrow('deno', ['compile',
         '--output', './',
         '--target', 'x86_64-pc-windows-msvc',
-        ...'--allow-read --allow-write --allow-net --allow-run --allow-sys ./file-db.js'.split(' '),
+        ...'--allow-env --allow-read --allow-write --allow-net --allow-run --allow-sys ./file-db.js'.split(' '),
     ], {
         cwd: './dist',
     })
