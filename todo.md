@@ -1,11 +1,12 @@
 # Todo
 - [-] Watch path and report patches to possibly deconflict
   - [x] Refactor arguments
-  - [ ] Watch path until Ctrl+c
+  - [-] Watch path until Ctrl+c
     - [ ] Report matching hashes
     - [ ] Save new paths for adds
     - [ ] Update paths for moves
     - [ ] Remove paths for deletes
+    - [ ] Directory junctions and hard links aren't notified, can we inspect for them?
 - [ ] Add copy with Verify
   - [ ] Add xxHash3-64 for quick non-conflict hash
   - [ ] Copy and auto-update
