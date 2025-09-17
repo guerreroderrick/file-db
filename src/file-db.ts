@@ -5,6 +5,7 @@ import { performIgnoreAction } from "./commands/performIgnoreAction.ts";
 import { showTree } from "./commands/showTree.ts";
 import { mergeDatabaseFile } from "./commands/mergeDatabaseFile.ts";
 import { cleanDatabase } from "./commands/cleanDatabase.ts";
+import { watchPath } from "./commands/watchPath.ts";
 
 if (import.meta.main) {
     await main(Deno.args)
@@ -95,8 +96,12 @@ async function runParameterSet(params: RunMainParams) {
             const correctDrivePaths = filePath.match(/^[a-z]:$/i)
                 ? `${filePath}/`
                 : filePath
+            await watchPath({
+                dbPath,
+                filePath: correctDrivePaths,
+            })
             console.log({
-                debug: 'Watch not yet implemented',
+                debug: 'Watch complete',
                 dbPath,
                 filePath: correctDrivePaths,
             })
