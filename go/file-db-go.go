@@ -15,7 +15,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/cespare/xxhash/v2"
 	"github.com/cxmcc/tiger"
+	"github.com/zeebo/xxh3"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/blake2s"
 )
@@ -60,6 +62,14 @@ func runTimeHashes(args []string) {
 	start = time.Now()
 	hashFiles(files, func() hash.Hash { return sha512.New() })
 	log.Printf("Hash files sha512: %v\n", time.Since(start))
+
+	start = time.Now()
+	hashFiles(files, func() hash.Hash { return xxh3.New() })
+	log.Printf("Hash files xxh3: %v\n", time.Since(start))
+
+	start = time.Now()
+	hashFiles(files, func() hash.Hash { return xxhash.New() })
+	log.Printf("Hash files xxh64: %v\n", time.Since(start))
 
 	start = time.Now()
 	hashFiles(files, func() hash.Hash {

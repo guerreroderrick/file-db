@@ -8,7 +8,8 @@
     - [ ] Remove paths for deletes
     - [ ] Directory junctions and hard links aren't notified, can we inspect for them?
 - [ ] Add copy with Verify
-  - [ ] Add xxHash3-64 for quick non-conflict hash
+  - [-] Add xxHash3-64 for quick non-conflict hash
+    - [ ] Add collision checks to time-hashes
   - [ ] Copy and auto-update
 - [:] Clean archived and vacuum
   - [x] Add scanId for pathErrors
