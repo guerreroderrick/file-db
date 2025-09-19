@@ -1,31 +1,44 @@
 type EventKind = Deno.FsEvent['kind']
-type PathEventBuffer = Promise<string>
+const TimerSignal = 'expired' as const
+type TimerSignal = typeof TimerSignal
 type ReducedEvent = {
     path: string
     kind: EventKind
 }
 export async function *reduceFileEvents(watcher: Deno.FsWatcher, debounceMilliseconds: number) {
 
-    const paths = new Map<string, { timer: PathEventBuffer, kind: EventKind}>()
-    const timers: PathEventBuffer[] = []
+    const paths = new Map<string, { timer: number, kind: EventKind}>()
 
     const watchIterator = watcher[Symbol.asyncIterator]()
 
-    let fsNext = await watchIterator.next()
-    while (true) {
-        if (fsNext.done) { break }
+    const expired: string[] = []
+    let expire: ((signal: TimerSignal) => void) | undefined
 
+    async function tryWait() {
+        if (expired.length > 0) { return TimerSignal }
+        return await new Promise<TimerSignal>(resolve => expire = resolve)
+    }
+    function advance(path: string) { 
+        expired.push(path)
+        if (expire) {
+            expire(TimerSignal)
+            expire = undefined
+        }
+    }
+
+    for (let fsNext = await watchIterator.next()
+        ; !fsNext.done
+        ;
+    ) {
         const event = fsNext.value
         for (const path of event.paths) {
-            if (paths.has(path)) {
-                paths.get(path)!.kind = event.kind
+            const existing = paths.get(path)
+            if (existing) {
+                existing.kind = event.kind
             } else {
-                const timer: PathEventBuffer = new Promise((resolve) => {
-                    setTimeout(() => {
-                        resolve(path)
-                    }, debounceMilliseconds)
-                })
-                timers.push(timer)
+                const timer = setTimeout(() => {
+                    advance(path)
+                }, debounceMilliseconds)
                 paths.set(path, {
                     timer,
                     kind: event.kind,
@@ -33,33 +46,37 @@ export async function *reduceFileEvents(watcher: Deno.FsWatcher, debounceMillise
             }
         }
         const fsNextProvider = watchIterator.next()
+        let bufferNextProvider = tryWait()
         let nextResult = await Promise.race([
             fsNextProvider,
-            ...timers,
+            bufferNextProvider,
         ])
         for (
-            ; typeof nextResult === 'string'
-            ; nextResult = await Promise.race([
+            ; nextResult === 'expired'
+            ; bufferNextProvider = tryWait()
+            , nextResult = await Promise.race([
                 fsNextProvider,
-                ...timers,
+                bufferNextProvider,
             ])
         ) {
-            const path = nextResult
-            const removed = paths.get(path)!
-            paths.delete(path)
-            const removeIndex = timers.indexOf(removed.timer)
-            timers.splice(removeIndex, 1)
-            yield {
-                path,
-                kind: removed.kind,
-            } as ReducedEvent
+            const ready = expired
+                .map(path => ({
+                    path,
+                    kind: paths.get(path)!.kind,
+                } as ReducedEvent))
+            expired.length = 0
+            for (const event of ready) {
+                paths.delete(event.path)
+                yield event
+            }
         }
         fsNext = nextResult
     }
-    for (const entry of paths) {
+    for (const [path, {timer, kind}] of paths) {
         yield {
-            path: entry[0],
-            kind: entry[1].kind,
-        }
+            path,
+            kind,
+        } as ReducedEvent
+        clearTimeout(timer)
     }
 }
