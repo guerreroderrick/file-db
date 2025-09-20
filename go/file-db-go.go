@@ -11,6 +11,7 @@ import (
 	"hash"
 	"io"
 	"log"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
@@ -54,6 +55,13 @@ func runTimeHashes(args []string) {
 	start := time.Now()
 	files := listFiles(dir)
 	log.Printf("List files: %v found %d files\n", time.Since(start), len(files))
+
+	fmt.Printf("Permuting files...")
+	for i := range files {
+		j := rand.Intn(i + 1)
+		files[i], files[j] = files[j], files[i]
+	}
+	fmt.Println(" done.")
 
 	start = time.Now()
 	hashFiles2(files, func() hash.Hash { return sha256.New() }, true)
