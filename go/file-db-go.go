@@ -38,63 +38,72 @@ func main() {
 	}
 }
 
+const includeIgnoredHashes = "--include-ignore-hashes"
+
 func runTimeHashes(args []string) {
-	if len(args) != 1 {
+	argLen := len(args)
+	if argLen < 1 || argLen > 2 {
+		usageAndDie()
+	}
+	if argLen == 2 && args[1] != includeIgnoredHashes {
 		usageAndDie()
 	}
 	dir := args[0]
+	isIncludeIgnoredHashes := argLen == 2
 
 	start := time.Now()
 	files := listFiles(dir)
 	log.Printf("List files: %v found %d files\n", time.Since(start), len(files))
 
 	start = time.Now()
-	hashFiles(files, func() hash.Hash { return md5.New() })
-	log.Printf("Hash files md5: %v\n", time.Since(start))
+	hashFiles2(files, func() hash.Hash { return sha256.New() }, true)
+	log.Printf("Hash files(c) sha256: %v\n", time.Since(start))
 
 	start = time.Now()
-	hashFiles(files, func() hash.Hash { return sha1.New() })
-	log.Printf("Hash files sha1: %v\n", time.Since(start))
+	hashFiles2(files, func() hash.Hash { return xxh3.New() }, true)
+	log.Printf("Hash files(c) xxh3: %v\n", time.Since(start))
 
 	start = time.Now()
-	hashFiles(files, func() hash.Hash { return sha256.New() })
-	log.Printf("Hash files sha256: %v\n", time.Since(start))
+	hashFiles2(files, func() hash.Hash { return xxhash.New() }, true)
+	log.Printf("Hash files(c) xxh64: %v\n", time.Since(start))
 
-	start = time.Now()
-	hashFiles(files, func() hash.Hash { return sha512.New() })
-	log.Printf("Hash files sha512: %v\n", time.Since(start))
+	if isIncludeIgnoredHashes {
+		start = time.Now()
+		hashFiles(files, func() hash.Hash { return md5.New() })
+		log.Printf("Hash files md5: %v\n", time.Since(start))
 
-	start = time.Now()
-	hashFiles(files, func() hash.Hash { return xxh3.New() })
-	log.Printf("Hash files xxh3: %v\n", time.Since(start))
+		start = time.Now()
+		hashFiles(files, func() hash.Hash { return sha1.New() })
+		log.Printf("Hash files sha1: %v\n", time.Since(start))
 
-	start = time.Now()
-	hashFiles(files, func() hash.Hash { return xxhash.New() })
-	log.Printf("Hash files xxh64: %v\n", time.Since(start))
+		start = time.Now()
+		hashFiles(files, func() hash.Hash { return sha512.New() })
+		log.Printf("Hash files sha512: %v\n", time.Since(start))
 
-	start = time.Now()
-	hashFiles(files, func() hash.Hash {
-		hasher, err := blake2b.New256(nil)
-		if err != nil {
-			log.Panicln(err)
-		}
-		return hasher
-	})
-	log.Printf("Hash files blake2b: %v\n", time.Since(start))
+		start = time.Now()
+		hashFiles(files, func() hash.Hash {
+			hasher, err := blake2b.New256(nil)
+			if err != nil {
+				log.Panicln(err)
+			}
+			return hasher
+		})
+		log.Printf("Hash files blake2b: %v\n", time.Since(start))
 
-	start = time.Now()
-	hashFiles(files, func() hash.Hash {
-		hasher, err := blake2s.New256(nil)
-		if err != nil {
-			log.Panicln(err)
-		}
-		return hasher
-	})
-	log.Printf("Hash files blake2s: %v\n", time.Since(start))
+		start = time.Now()
+		hashFiles(files, func() hash.Hash {
+			hasher, err := blake2s.New256(nil)
+			if err != nil {
+				log.Panicln(err)
+			}
+			return hasher
+		})
+		log.Printf("Hash files blake2s: %v\n", time.Since(start))
 
-	start = time.Now()
-	hashFiles(files, func() hash.Hash { return tiger.New() })
-	log.Printf("Hash files tiger: %v\n", time.Since(start))
+		start = time.Now()
+		hashFiles(files, func() hash.Hash { return tiger.New() })
+		log.Printf("Hash files tiger: %v\n", time.Since(start))
+	}
 
 	log.Println("Done")
 }
@@ -132,7 +141,8 @@ func usageAndDie() {
 	fmt.Println(`Usage: file-db-go command [options]
     Commands:
     - time-hashes: Show has times of files under <dir>.
-        Args: <dir> - the root directory of files to hash.
+        Args option 1: <dir> - the root directory of files to hash.
+        Args option 2: [--include-ignore-hashes]
     - hash-files: Show SHA-256 hash and filename.
         Args option 1: Pass files to be hashed.
             file-db-go hash-files file1 file2 file3 ...
@@ -160,9 +170,31 @@ func listFiles(dir string) []string {
 	return files
 }
 
-func hashFiles(files []string, hashFactory func() hash.Hash) {
+func hashFiles(
+	files []string,
+	hashFactory func() hash.Hash,
+) {
+	hashFiles2(files, hashFactory, false)
+}
+
+func hashFiles2(
+	files []string,
+	hashFactory func() hash.Hash,
+	checkCollisions bool,
+) {
+	counts := make(map[string]int)
 	for _, file := range files {
-		getFileHash(file, hashFactory)
+		hash, err := getFileHash(file, hashFactory)
+		if nil != err {
+			log.Panicln(err)
+		}
+		if checkCollisions {
+			counts[hash]++
+		}
+	}
+	if checkCollisions {
+		mapSize := len(counts)
+		log.Printf("%d unique hashes\n", mapSize)
 	}
 }
 
