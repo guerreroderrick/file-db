@@ -28,11 +28,12 @@ func main() {
 		usageAndDie()
 	}
 	command := args[0]
-	if command == "hash-files" {
+	switch command {
+	case "hash-files":
 		runHashFiles(args[1:])
-	} else if command == "time-hashes" {
+	case "time-hashes":
 		runTimeHashes(args[1:])
-	} else {
+	default:
 		usageAndDie()
 	}
 }
