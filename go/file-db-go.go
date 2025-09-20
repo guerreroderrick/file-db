@@ -182,8 +182,12 @@ func hashFiles2(
 	hashFactory func() hash.Hash,
 	checkCollisions bool,
 ) {
+	lastCheckIn := time.Now()
+	startTime := lastCheckIn
 	counts := make(map[string]int)
+	i := 0
 	for _, file := range files {
+		i++
 		hash, err := getFileHash(file, hashFactory)
 		if nil != err {
 			log.Panicln(err)
@@ -191,6 +195,18 @@ func hashFiles2(
 		if checkCollisions {
 			counts[hash]++
 		}
+		now := time.Now()
+		diff := now.Sub(lastCheckIn)
+		if diff.Milliseconds() > 1000 {
+			totalTime := now.Sub(startTime)
+			percent := float64(i) / float64(len(files))
+			estimate := time.Duration(totalTime.Seconds() / percent * float64(time.Second))
+			fmt.Printf("%s of ~%s: %d files %.2f%%\r", totalTime.String(), estimate.String(), i, percent*100.0)
+			lastCheckIn = now
+		}
+	}
+	if lastCheckIn != startTime {
+		log.Printf("\n")
 	}
 	if checkCollisions {
 		mapSize := len(counts)
